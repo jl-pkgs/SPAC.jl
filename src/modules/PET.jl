@@ -74,13 +74,13 @@ end
 ET, Eeq, Evp, ra = ET0_Monteith65(Rn, Tair, VPD, Uz, Pa; rs, hc, z_wind=2.0)
 """
 function ET0_Monteith65(Rn::T, Tair::T, VPD::T, Uz::T, Pa::T=atm;
-  β::T=1.0, z_wind::T=2.0, rs::T=70.0, hc::T=0.12) where {T<:Real}
+  β::T=1.0, z_wind::T=2.0, rs::T=70.0, hc::T=0.12, z_obs::T=T(15.0)) where {T<:Real}
   Φ = T(0)
   rs <= 0.01 && return (; Ec=Φ, Eeq=Φ, Evp=Φ, ra=Φ) # 无冠层 无冠层蒸发
 
   Eeq, λ, Δ, γ = ET0_eq(Rn, Tair, Pa)
   U2 = cal_U2(Uz, z_wind)
-  ra = aerodynamic_resistance(U2, hc)
+  ra = aerodynamic_resistance(U2, hc; z_obs)
   rs = rs / β
 
   ρₐ = cal_rho_a(Tair, Pa) # FAO56, Eq. 3-5, [kg m-3]

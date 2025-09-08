@@ -56,7 +56,7 @@ function evapotranspiration!(
   ## Intercepted Evaporation (Ei)
   Ei = cal_Ei_Dijk2021(Prcp, Lai, fER0, S_sls)
   Pi = Prcp - Ei # 应扣除这一部分消耗的能量
-  Rn = Rn - MJ2W(λ * Pi)
+  # Rn = Rn - MJ2W(λ * Pi)
 
   radiative_transfer!(canopy, Rn; kA)
   (; Rn_c, Rn_s) = canopy

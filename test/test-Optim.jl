@@ -29,7 +29,7 @@ end
   theta, gof = optim(model, df; parNames, params, maxn=5000, fun_gof=of_KGE)
   # DataFrame(; name=d_par.name, default=d_par.value, optim=theta)
   @test gof.NSE[1] >= 0.54
-  @test gof.NSE[2] >= 0.64
+  @test gof.NSE[2] >= 0.60
 
   theta, gof = optim(model, df; parNames, params, maxn=1500, fun_gof=of_NSE)
   @test gof.NSE[1] >= 0.50

@@ -2,6 +2,7 @@ using SPAC, Test
 
 
 # include("test-Ipaper.jl")
+include("test-PMLV2.jl")
 include("test-Optim.jl")
 include("test-stomatal_conductance.jl")
 include("test-photosynthesis.jl")
@@ -19,7 +20,7 @@ include("test-evapotranspiration.jl")
 
   parnames = [:kQ, :VCmax25, :VPDmin]
   parvalues = [0.6, 10., 0.8]
-  @time update!(model, parnames, parvalues; params)
+  @time SPAC.update!(model, parnames, parvalues; params)
 
   @test model.kQ == 0.6
   @test model.VCmax25 == 10.
