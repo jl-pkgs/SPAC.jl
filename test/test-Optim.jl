@@ -16,22 +16,22 @@ begin
 end
 
 @testset "model_goal" begin
-  parnames = [:kQ, :VCmax25, :VPDmin]
-  parvalues = [0.6, 10., 0.8]
-  @test model_goal(parvalues, model, df; parnames, params) <= -0.15
+  parNames = [:kQ, :VCmax25, :VPDmin]
+  parValues = [0.6, 10., 0.8]
+  @test model_goal(parValues, model, df; parNames, params) <= -0.15
 end
 
 
 @testset "Optims" begin
-  parnames = setdiff(params.name, [:d_PC])
-  d_par = default_params(model; parnames)
+  parNames = setdiff(params.name, [:d_PC])
+  d_par = default_params(model; parNames)
 
-  theta, gof = optim(model, df; parnames, params, maxn=5000, fun_gof=of_KGE)
+  theta, gof = optim(model, df; parNames, params, maxn=5000, fun_gof=of_KGE)
   # DataFrame(; name=d_par.name, default=d_par.value, optim=theta)
   @test gof.NSE[1] >= 0.54
   @test gof.NSE[2] >= 0.64
 
-  theta, gof = optim(model, df; parnames, params, maxn=1000, fun_gof=of_NSE)
+  theta, gof = optim(model, df; parNames, params, maxn=1500, fun_gof=of_NSE)
   @test gof.NSE[1] >= 0.50
   @test gof.NSE[2] >= 0.60
 end
