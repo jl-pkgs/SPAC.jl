@@ -43,7 +43,7 @@ function stomatal_conductance(stomatal::Stomatal_Medlyn2011, Ag::T, Rd::T, D::T,
   (; g0, g1) = stomatal
   An = Ag - Rd
   gs = g0 + 1.6(1 + g1 / sqrt(D)) * (An / Ca) # second term in [mol m-2 s-1]
-  return gs # [umol m-2 s-1]
+  return gs # [mol m-2 s-1]
 end
 
 

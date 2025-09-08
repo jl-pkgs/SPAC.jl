@@ -31,8 +31,6 @@ end
 # site = "哀牢山"
 # out, par, gof1_WithPC = run_model(; site, use_PC=true, optim_PC=true)
 # out, par, gof1_NonPC = run_model(; site, use_PC=false)
-
-# stomatal = Stomatal_Medlyn2011{Float64}()
 # out, par, gof2_WithPC = run_model(; site, use_PC=true, optim_PC=true, stomatal)
 # out, par, gof2_NonPC = run_model(; site, use_PC=false, stomatal)
 
@@ -89,14 +87,15 @@ function get_prefix(; use_PC, optim_PC, type_lai)
   "LAI_$type_lai" * ",$prefix"
 end
 
-function process(; use_PC=false, optim_PC=true, type_lai="glass")
+function process(; use_PC=false, optim_PC=true, type_lai="glass", 
+  outdir, stomatal, kw...)
   prefix = get_prefix(; use_PC, optim_PC, type_lai)
   N = length(sites)
   res = Vector{Any}(undef, N)
   @par for i in 1:N
     site = sites[i]
     printstyled("[$i] $site\n", color=:green, bold=true)
-    res[i] = run_model(; site, use_PC, optim_PC, type_lai, of_gof=:NSE)
+    res[i] = run_model(; site, use_PC, optim_PC, type_lai, of_gof=:NSE, stomatal, kw...)
   end
 
   df_gof = vcat(map(x -> x.gof, res)...)
@@ -106,7 +105,6 @@ function process(; use_PC=false, optim_PC=true, type_lai="glass")
   parNames = collect(keys(res[1].par))
   df_par = cbind(DataFrame(mat_par, parNames); site=sites)[:, Cols(:site, 1:end)]
 
-  outdir = "./Project_PhotoPeriod/OUTPUT"
   mkpath(outdir)
 
   fwrite(df_gof, "$outdir/PMLV2China_flux37_$(prefix)_gof.csv")
@@ -117,15 +115,21 @@ function process(; use_PC=false, optim_PC=true, type_lai="glass")
     (; var="GPP", GOF(df_out.GPP_obs, df_out.GPP)...)] |> DataFrame
 end
 
+stomatal_Medlyn2011 = Stomatal_Medlyn2011{Float64}()
+stomatal_Yu2024 = Stomatal_Yu2004{Float64}()
+
+# outdir = "./Project_PhotoPeriod/OUTPUT"
+outdir = "./Project_PhotoPeriod/OUTPUT/Medlyn2011_V2"
+kw = (; outdir, stomatal = Stomatal_Medlyn2011{Float64}())
 
 begin
-  r_whit_WithPC = process(; type_lai="whit", use_PC=true, optim_PC=true)
-  r_whit_ConstPC = process(; type_lai="whit", use_PC=true, optim_PC=false)
-  r_whit_NonPC = process(; type_lai="whit", use_PC=false)
+  r_whit_WithPC = process(; type_lai="whit", use_PC=true, optim_PC=true, kw...)
+  r_whit_ConstPC = process(; type_lai="whit", use_PC=true, optim_PC=false, kw...)
+  r_whit_NonPC = process(; type_lai="whit", use_PC=false, kw...)
 
-  r_glass_WithPC = process(; type_lai="glass", use_PC=true, optim_PC=true)
-  r_glass_ConstPC = process(; type_lai="glass", use_PC=true, optim_PC=false)
-  r_glass_NonPC = process(; type_lai="glass", use_PC=false)
+  r_glass_WithPC = process(; type_lai="glass", use_PC=true, optim_PC=true, kw...)
+  r_glass_ConstPC = process(; type_lai="glass", use_PC=true, optim_PC=false, kw...)
+  r_glass_NonPC = process(; type_lai="glass", use_PC=false, kw...)
 
   cbind(r_whit_NonPC; type_lai="WHIT", type_pc="NonPC")
   cbind(r_whit_ConstPC; type_lai="WHIT", type_pc="ConstPC")
