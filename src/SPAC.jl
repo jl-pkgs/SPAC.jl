@@ -6,7 +6,7 @@ export PMLV2, PMLV2_sites,
 
 export file_FLUXNET_CRO, file_FLUXNET_CRO_USTwt
 export DataFrame, GOF, sceua
-export fread, fwrite, melt_list
+export fread, fwrite, melt_list, deserialize
 
 
 using UnPack, Printf
@@ -17,7 +17,7 @@ using DocStringExtensions
 
 
 import ModelParams: GOF, sceua
-import Ipaper: par_map
+import Ipaper: par_map, deserialize
 
 
 ## global data

@@ -8,7 +8,11 @@ begin
 
   df_out, df, _par = deserialize(file_FLUXNET_CRO_USTwt)
   model = LandModel{FT}(evap, photo, stomatal)
+  println(model)
   model_gof(model, df)
+
+  params = Params(model)
+  params[params.name.==:hc, :bound] = [(0.1, 2.0)] # 修改参数bounds
 end
 
 @testset "model_goal" begin
@@ -19,16 +23,13 @@ end
 
 
 @testset "Optims" begin
-  params = Params(model) |> DataFrame
-  params[params.name.==:hc, :bound] = [(0.1, 2.0)] # 修改参数bounds
-
   parnames = setdiff(params.name, [:d_PC])
   d_par = default_params(model; parnames)
 
-  theta, gof = optim(model, df; parnames, params, maxn=1000, fun_gof=of_KGE)
+  theta, gof = optim(model, df; parnames, params, maxn=5000, fun_gof=of_KGE)
   # DataFrame(; name=d_par.name, default=d_par.value, optim=theta)
-  @test gof.NSE[1] >= 0.50
-  @test gof.NSE[2] >= 0.55
+  @test gof.NSE[1] >= 0.54
+  @test gof.NSE[2] >= 0.64
 
   theta, gof = optim(model, df; parnames, params, maxn=1000, fun_gof=of_NSE)
   @test gof.NSE[1] >= 0.50
