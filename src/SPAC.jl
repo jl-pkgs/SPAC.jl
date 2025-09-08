@@ -32,6 +32,8 @@ include("modules/modules.jl")
 include("evapotranspiration.jl")
 include("ET_PMLV2.jl")
 
+include("Optim.jl")
+
 include("Radiation/tridiagonal_solver.jl")
 include("Radiation/helper.jl")
 include("Radiation/Norman_Longwave.jl")

@@ -25,6 +25,11 @@ function evapotranspiration(
   evapotranspiration(evap, photo, stomatal, forcing...; kw...)
 end
 
+function evapotranspiration(model::LandModel{T}, d::AbstractDataFrame; kw...) where {T}
+  (; evap, photo, stomatal) = model
+  evapotranspiration(evap, photo, stomatal, d; kw...)
+end
+
 
 # 相同植被类型多个站点一起的计算
 function evapotranspiration_multi(

@@ -1,7 +1,8 @@
 using SPAC, Test
-import DataFrames: DataFrame
+
 
 # include("test-Ipaper.jl")
+include("test-Optim.jl")
 include("test-stomatal_conductance.jl")
 include("test-photosynthesis.jl")
 include("test-PET.jl")
@@ -15,7 +16,6 @@ include("test-evapotranspiration.jl")
   model = Photosynthesis_Rong2018{FT}()
 
   params = Params(model)
-  params |> DataFrame
 
   parnames = [:kQ, :VCmax25, :VPDmin]
   parvalues = [0.6, 10., 0.8]

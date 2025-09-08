@@ -64,9 +64,26 @@ function update!(air::AirLayer{T}, Prcp::T, Tavg::T, Rs::T, Rn::T, VPD::T, U2::T
 end
 
 
-@with_kw mutable struct LandModel{T} <: AbstractModel{T}
+@with_kw_noshow mutable struct LandModel{T} <: AbstractModel{T}
   # atmospheric_forcing::AtmosphericForcing
   evap::AbstractEvapotranspirationModel{T}
   photo::AbstractPhotosynthesisModel{T}
   stomatal::AbstractStomatalModel{T}
+end
+
+
+function Base.show(io::IO, x::LandModel{T}) where {T<:Real}
+  (; evap, photo, stomatal) = x
+  
+  printstyled(io, "LandModel{$T}: \n", color=:green, bold=true)
+
+  printstyled(io, "photo{$T}: ", color=:blue, bold=true)
+  print(io, photo)
+  
+  printstyled(io, "stomatal{$T}: ", color=:blue, bold=true)
+  print(io, evap)
+
+  printstyled(io, "stomatal{$T}: ", color=:blue, bold=true)
+  print(io, stomatal)
+  return nothing
 end

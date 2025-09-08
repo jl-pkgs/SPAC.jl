@@ -44,18 +44,18 @@ function Params(model::AbstractModel)
   # 返回NamedTuple向量，符合Tables接口
   [(name=last(n), value=last(v), bound=last(b),
     unit=last(u), path=first(n))
-   for (n, v, u, b) in zip(_names, _values, _units, _bounds)]
+   for (n, v, u, b) in zip(_names, _values, _units, _bounds)] |> DataFrame
 end
 
 
 function update!(model::AbstractModel{FT}, names::Vector{Symbol}, values::Vector{FT},
-  ; params::Union{Nothing,Vector{<:NamedTuple}}=nothing) where {FT}
+  ; params::Union{Nothing,DataFrame}=nothing) where {FT}
   isnothing(params) && (params = ModelParams(model))
 
   for (name, value) in zip(names, values)
     rows = filter(row -> row.name == name, params)
-    @assert length(rows) == 1 "Duplicated parameters are not allowed!"
-    update!(model, rows[1].path, value)
+    @assert size(rows, 1) == 1 "Duplicated parameters are not allowed!"
+    update!(model, rows.path[1], value)
   end
 end
 

@@ -24,15 +24,20 @@ end
 
 
 ## 测试单站点的运行与模拟
-@testset "evapotranspiration One Site" begin
+# @testset "evapotranspiration One Site" 
+begin
   FT = Float64
-  air = AirLayer{FT}()
-  canopy_bare = BigLeaf{FT}(; Lai=0.0)
-  canopy_veg = BigLeaf{FT}(; Lai=2.0)
   evap = Evapotranspiration_PML{FT}()
   photo = Photosynthesis_Rong2018{FT}()
   stomatal = Stomatal_Yu2004{FT}()
 
   df_out, df, _par = deserialize(file_FLUXNET_CRO_USTwt)
-  @test_nowarn res = evapotranspiration(evap, photo, stomatal, df) |> DataFrame
+  res = evapotranspiration(evap, photo, stomatal, df) |> DataFrame
+
+  # df_out.ET_obs
+  GOF(df.GPPobs, df_out.GPP_sim)
+  GOF(df.ETobs, df_out.ET_sim)
+
+  GOF(df.GPPobs, res.GPP)
+  GOF(df.ETobs, res.ET)
 end

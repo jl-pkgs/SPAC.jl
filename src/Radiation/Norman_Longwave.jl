@@ -118,7 +118,7 @@ end
 
 # global variable: atri, btri, ctri, dtri, ir_source, τd
 function update_ef(atri::V, btri::V, ctri::V, dtri::V,
-  τl::T, τd::V, ρ, ir_source::V,
+  τl::T, τd::V, ρ::V, ir_source::V,
   i::Int, m::Int; direction="up") where {T<:Real,V<:AbstractVector{T}}
 
   @inbounds refld = (1 - τd[i]) * ρ[i]
