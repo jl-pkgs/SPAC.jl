@@ -80,7 +80,7 @@ function Base.show(io::IO, x::LandModel{T}) where {T<:Real}
   printstyled(io, "photo{$T}: ", color=:blue, bold=true)
   print(io, photo)
   
-  printstyled(io, "stomatal{$T}: ", color=:blue, bold=true)
+  printstyled(io, "evap{$T}: ", color=:blue, bold=true)
   print(io, evap)
 
   printstyled(io, "stomatal{$T}: ", color=:blue, bold=true)

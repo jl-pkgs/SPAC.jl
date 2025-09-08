@@ -12,7 +12,7 @@ end
   + `CLM5`      : 0.0001 [mol m-2 s-1] for C3 and C4
   + `Medlyn2011`: [-0.04, 0.04]
 """
-@bounds @with_kw struct Stomatal_Medlyn2011{FT} <: AbstractStomatalModel{FT}
+@bounds @with_kw mutable struct Stomatal_Medlyn2011{FT} <: AbstractStomatalModel{FT}
   "stomatal conductance coefficient, `mol m⁻² s⁻¹`" # 气孔导度斜率参数
   g0::FT = 0.0001 | (0.0, 0.04)  # 100 μmol m⁻² s⁻¹
 

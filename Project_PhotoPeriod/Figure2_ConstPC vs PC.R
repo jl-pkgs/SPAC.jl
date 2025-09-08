@@ -3,12 +3,12 @@ pacman::p_load(
   ggplot2, gg.layers, ggrepel
 )
 
-f = "./OUTPUT/PMLV2China_flux37_LAI_glass,ConstPC_gof.csv"
-d = fread(f)
+# f = "./OUTPUT/PMLV2China_flux37_LAI_glass,ConstPC_gof.csv"
+# d = fread(f)
+indir = "./Project_PhotoPeriod/OUTPUT/"
 
 sites = c("儋州", "哀牢山", "西双版纳-Rubber", "西双版纳-EBF", "鼎湖山")
-d[site %in% sites, ]
-
+# d[site %in% sites, ]
 
 # dat[GLASS <= -2]
 set_font()
@@ -17,8 +17,8 @@ plot_Figure1 <- function(VAR="GPP", type_lai = "whit",
   x = "ConstPC", y = "WithPC", 
   lims = c(0.2, 1), thr = 0.02) {
   
-  dat_x = fread(glue("./OUTPUT/PMLV2China_flux37_LAI_{type_lai},{x}_gof.csv"))
-  dat_y = fread(glue("./OUTPUT/PMLV2China_flux37_LAI_{type_lai},{y}_gof.csv"))
+  dat_x = fread(glue("{indir}/PMLV2China_flux37_LAI_{type_lai},{x}_gof.csv"))
+  dat_y = fread(glue("{indir}/PMLV2China_flux37_LAI_{type_lai},{y}_gof.csv"))
 
   df = listk(x = dat_x, y = dat_y) %>% melt_list("type")
   dat = df %>%
@@ -54,11 +54,12 @@ plot_Figure1 <- function(VAR="GPP", type_lai = "whit",
 }
 
 ## LAI
-type_lai = "whit"
-# type_lai = "glass"
+# type_lai = "whit"
+type_lai = "glass"
 # x = "ConstPC"
 x = "NonPC"
 y = "ConstPC"
 # y = "WithPC"
+
 plot_Figure1("GPP", type_lai, thr = 0.02, x = x, y = y)
 plot_Figure1("ET", type_lai, lims = c(0.2, 0.9), thr = 0.02, x = x, y = y)
