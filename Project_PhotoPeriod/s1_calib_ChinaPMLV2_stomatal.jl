@@ -1,13 +1,13 @@
 include("main_pkgs.jl")
 
-function runtests(config; prefix="Medlyn2011")
+function runtests(config; prefix="Medlyn2011", type_lai="whit")
   for i in eachindex(config)
     kw = config[i]
     (; PC_photo, PC_g1, PC_g0) = kw
     _prefix_PC = "(PC_photo=$PC_photo,g1=$PC_g1,g0=$PC_g0)"
     outdir = "./Project_PhotoPeriod/OUTPUT/$(prefix)_$(_prefix_PC)"
     println(outdir)
-    r = process(; type_lai="whit", optim_PC=false, outdir, kw...)
+    r = process(; type_lai, optim_PC=false, outdir, kw...)
   end
 end
 
@@ -29,11 +29,12 @@ types_lai = ["whit", "glass"]
 stomatal = Stomatal_Medlyn2011
 configs = [
   (; stomatal, PC_photo=false, PC_g1=false, PC_g0=false), # 对照组
+  (; stomatal, PC_photo=true, PC_g1=false, PC_g0=false),    # A1
   (; stomatal, PC_photo=true, PC_g1=true, PC_g0=true),    # A1
   (; stomatal, PC_photo=true, PC_g1=true, PC_g0=false),
   (; stomatal, PC_photo=true, PC_g1=false, PC_g0=true),
 ]
-runtests(configs)
+runtests(configs; type_lai="glass")
 
 
 ## 方案2: 
@@ -43,4 +44,4 @@ configs = [
   (; stomatal, PC_photo=true, PC_g1=true, PC_g0=false),   # A1
   (; stomatal, PC_photo=true, PC_g1=false, PC_g0=false),
 ]
-runtests(configs; prefix="Yu2004")
+runtests(configs; prefix="Yu2004", type_lai="glass")

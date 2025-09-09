@@ -7,13 +7,14 @@
 
   Tavg = 25.0  # degC
   Pa = 101.325 # kPa
+  PC = 1.0
 
   stomatal_Yu2004 = Stomatal_Yu2004{FT}(D0=0.7, g1=10)
   stomatal_Medlyn2011 = Stomatal_Medlyn2011{FT}(; g0=0.0001, g1=2.0)
 
   # Gs在0.1 ~ 0.4 [mol m-2 s-1]是合理的值域，对应的阻力在 100~400 [s m-1]
-  gs_yu2004 = stomatal_conductance(stomatal_Yu2004, Ag, Rd, VPD, Ca)
-  gs_medlyn2011 = stomatal_conductance(stomatal_Medlyn2011, Ag, Rd, VPD, Ca)
+  gs_yu2004 = stomatal_conductance(stomatal_Yu2004, Ag, Rd, VPD, Ca, PC)
+  gs_medlyn2011 = stomatal_conductance(stomatal_Medlyn2011, Ag, Rd, VPD, Ca, PC)
 
   @test gs_yu2004 ≈ 0.10916179337231968
   @test gs_medlyn2011 ≈ 0.08650343275861604
