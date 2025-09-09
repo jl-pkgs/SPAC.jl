@@ -29,13 +29,13 @@ function build_model(; FT=Float64,
 end
 
 # site = "哀牢山"
-# out, par, gof1_WithPC = run_model(; site, use_PC=true, optim_PC=true)
-# out, par, gof1_NonPC = run_model(; site, use_PC=false)
-# out, par, gof2_WithPC = run_model(; site, use_PC=true, optim_PC=true, stomatal)
-# out, par, gof2_NonPC = run_model(; site, use_PC=false, stomatal)
+# out, par, gof1_WithPC = run_model(; site, PC_photo=true, optim_PC=true)
+# out, par, gof1_NonPC = run_model(; site, PC_photo=false)
+# out, par, gof2_WithPC = run_model(; site, PC_photo=true, optim_PC=true, stomatal)
+# out, par, gof2_NonPC = run_model(; site, PC_photo=false, stomatal)
 
 function run_model(; site="",
-  use_PC=true, optim_PC=false, type_lai="whit",
+  PC_photo=true, optim_PC=false, type_lai="whit",
   of_gof=:NSE, maxn=5000, 
   stomatal=Stomatal_Yu2004{FT}(),
   kw...)
@@ -55,12 +55,12 @@ function run_model(; site="",
   forcing = (; date, GPP_obs=GPP, ET_obs=ET,
     Prcp=prcp, Tavg, Rs, Rn, VPD, U2,
     PC, Pa, Ca) |> DataFrame
-  use_PC && (forcing.PC = PC)
+  PC_photo && (forcing.PC = PC)
   type_lai == "whit" && (forcing.LAI = LAI_whit)
   type_lai == "glass" && (forcing.LAI = LAI_glass)
 
   ## 模型参数率定
-  model.photo.use_PC = use_PC
+  model.photo.PC_photo = PC_photo
   theta, gof = optim(model, forcing; parNames, params, var_obs=[:ET_obs, :GPP_obs], maxn)
 
   SPAC.update!(model, parNames, theta; params=Params(model)) # updating params
@@ -74,28 +74,28 @@ function run_model(; site="",
     par=NamedTuple(parNames, theta), gof)
 end
 
-# r_PC = run_model(; site, use_PC=true)
-# r_NonPC = run_model(; site, use_PC=false)
+# r_PC = run_model(; site, PC_photo=true)
+# r_NonPC = run_model(; site, PC_photo=false)
 
-# run_model(; site, use_PC=true, type_lai="whit", of_gof=:NSE)#.gof
-# run_model(; site, use_PC=false, type_lai="whit", of_gof=:NSE).gof
-function get_prefix(; use_PC, optim_PC, type_lai)
-  prefix = use_PC ? "ConstPC" : "NonPC"
-  if use_PC && optim_PC
+# run_model(; site, PC_photo=true, type_lai="whit", of_gof=:NSE)#.gof
+# run_model(; site, PC_photo=false, type_lai="whit", of_gof=:NSE).gof
+function get_prefix(; PC_photo, optim_PC, type_lai)
+  prefix = PC_photo ? "ConstPC" : "NonPC"
+  if PC_photo && optim_PC
     prefix = "WithPC"
   end
   "LAI_$type_lai" * ",$prefix"
 end
 
-function process(; use_PC=false, optim_PC=true, type_lai="glass", 
+function process(; PC_photo=false, optim_PC=true, type_lai="glass", 
   outdir, stomatal, kw...)
-  prefix = get_prefix(; use_PC, optim_PC, type_lai)
+  prefix = get_prefix(; PC_photo, optim_PC, type_lai)
   N = length(sites)
   res = Vector{Any}(undef, N)
   @par for i in 1:N
     site = sites[i]
     printstyled("[$i] $site\n", color=:green, bold=true)
-    res[i] = run_model(; site, use_PC, optim_PC, type_lai, of_gof=:NSE, stomatal, kw...)
+    res[i] = run_model(; site, PC_photo, optim_PC, type_lai, of_gof=:NSE, stomatal, kw...)
   end
 
   df_gof = vcat(map(x -> x.gof, res)...)
@@ -123,13 +123,13 @@ outdir = "./Project_PhotoPeriod/OUTPUT/Medlyn2011_V2"
 kw = (; outdir, stomatal = Stomatal_Medlyn2011{Float64}())
 
 begin
-  r_whit_WithPC = process(; type_lai="whit", use_PC=true, optim_PC=true, kw...)
-  r_whit_ConstPC = process(; type_lai="whit", use_PC=true, optim_PC=false, kw...)
-  r_whit_NonPC = process(; type_lai="whit", use_PC=false, kw...)
+  r_whit_WithPC = process(; type_lai="whit", PC_photo=true, optim_PC=true, kw...)
+  r_whit_ConstPC = process(; type_lai="whit", PC_photo=true, optim_PC=false, kw...)
+  r_whit_NonPC = process(; type_lai="whit", PC_photo=false, kw...)
 
-  r_glass_WithPC = process(; type_lai="glass", use_PC=true, optim_PC=true, kw...)
-  r_glass_ConstPC = process(; type_lai="glass", use_PC=true, optim_PC=false, kw...)
-  r_glass_NonPC = process(; type_lai="glass", use_PC=false, kw...)
+  r_glass_WithPC = process(; type_lai="glass", PC_photo=true, optim_PC=true, kw...)
+  r_glass_ConstPC = process(; type_lai="glass", PC_photo=true, optim_PC=false, kw...)
+  r_glass_NonPC = process(; type_lai="glass", PC_photo=false, kw...)
 
   cbind(r_whit_NonPC; type_lai="WHIT", type_pc="NonPC")
   cbind(r_whit_ConstPC; type_lai="WHIT", type_pc="ConstPC")

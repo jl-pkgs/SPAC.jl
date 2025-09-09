@@ -8,7 +8,6 @@
   Tavg = 25.0  # degC
   Pa = 101.325 # kPa
 
-
   stomatal_Yu2004 = Stomatal_Yu2004{FT}(D0=0.7, g1=10)
   stomatal_Medlyn2011 = Stomatal_Medlyn2011{FT}(; g0=0.0001, g1=2.0)
 

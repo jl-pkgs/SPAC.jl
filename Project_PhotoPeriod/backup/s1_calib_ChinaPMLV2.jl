@@ -21,7 +21,7 @@ parNames = [
 ]
 
 function run_model(; site="",
-  use_PC=true, type_lai="whit", 
+  PC_photo=true, type_lai="whit", 
   of_gof=:NSE, kw...)
 
   d = df[df.name.==site, :]
@@ -33,7 +33,7 @@ function run_model(; site="",
     # LAI=LAI_glass, 
     # LAI=LAI_whit,
     Pa, Ca) |> DataFrame
-  use_PC && (forcing.PC = PC)
+  PC_photo && (forcing.PC = PC)
   type_lai == "whit" && (forcing.LAI = LAI_whit)
   type_lai == "glass" && (forcing.LAI = LAI_glass)
 
@@ -51,24 +51,24 @@ function run_model(; site="",
     par = NamedTuple(parNames, theta), gof)
 end
 
-# run_model(; site, use_PC=true, type_lai="whit", of_gof=:NSE)#.gof
-# run_model(; site, use_PC=false, type_lai="whit", of_gof=:NSE).gof
-function get_prefix(use_PC, type_lai)
-  prefix = use_PC ? "WithPC" : "NonPC"
-  if use_PC && :d_pc ∉ parNames
+# run_model(; site, PC_photo=true, type_lai="whit", of_gof=:NSE)#.gof
+# run_model(; site, PC_photo=false, type_lai="whit", of_gof=:NSE).gof
+function get_prefix(PC_photo, type_lai)
+  prefix = PC_photo ? "WithPC" : "NonPC"
+  if PC_photo && :d_pc ∉ parNames
     prefix = "ConstPC"
   end
   "LAI_$type_lai" * ",$prefix"
 end
 
-function process(; use_PC=false, type_lai="glass")
-  prefix = get_prefix(use_PC, type_lai)
+function process(; PC_photo=false, type_lai="glass")
+  prefix = get_prefix(PC_photo, type_lai)
   N = length(sites)
   res = Vector{Any}(undef, N)
   @par for i in 1:N
     site = sites[i]
     printstyled("[$i] $site\n", color=:green, bold=true)
-    res[i] = run_model(; site, use_PC, type_lai, of_gof=:NSE)
+    res[i] = run_model(; site, PC_photo, type_lai, of_gof=:NSE)
   end
 
   df_gof = vcat(map(x -> x.gof, res)...)
@@ -87,10 +87,10 @@ end
 
 
 begin
-  r_whit_NonPC = process(; type_lai="whit", use_PC=false)
-  r_whit_WithPC = process(; type_lai="whit", use_PC=true)
-  r_glass_NonPC = process(; type_lai="glass", use_PC=false)
-  r_glass_WithPC = process(; type_lai="glass", use_PC=true)
+  r_whit_NonPC = process(; type_lai="whit", PC_photo=false)
+  r_whit_WithPC = process(; type_lai="whit", PC_photo=true)
+  r_glass_NonPC = process(; type_lai="glass", PC_photo=false)
+  r_glass_WithPC = process(; type_lai="glass", PC_photo=true)
 
   cbind(r_glass_NonPC; type_lai="GLASS", type_pc="NonPC")
   cbind(r_glass_WithPC; type_lai="GLASS", type_pc="WithPC")

@@ -19,7 +19,7 @@ export Photosynthesis_Rong2018
 
   watercons::AbstractWaterConsGPPModel{FT} = β_GPP_Zhang2019{FT}()
 
-  use_PC::Bool = false | (NaN, NaN) | "-" # 是否开启光周期, 不参与参数优化
+  PC_photo::Bool = false | (NaN, NaN) | "-" # 是否开启光周期, 不参与参数优化
 end
 
 

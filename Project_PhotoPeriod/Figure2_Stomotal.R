@@ -54,7 +54,7 @@ plot_Figure1 <- function(VAR="GPP", type_lai = "glass",
     # lims(x = lims, y = lims) +
     facet_wrap(~variable, scales = "free") 
   prefix = toupper(type_lai)
-  write_fig(p, glue("Figure3_{x}&{y}_{prefix}_{VAR}.pdf"), 10, 4.5)
+  write_fig(p, glue("Figure3_{x}&{y}_{prefix}_{VAR}_v2.pdf"), 10, 4.5)
 }
 
 ## LAI
