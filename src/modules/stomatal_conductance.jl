@@ -21,7 +21,7 @@ end
   g0::FT = 0.0001 | (0.0, 0.04) | "mol m⁻² s⁻¹" # 100 μmol m⁻² s⁻¹
 
   "stomatal conductance coefficient, `sqrt(kPa)`" # 气孔导度斜率参数
-  g1::FT = 2.00 | (1.0, 6.0) | "sqrt(kPa)"
+  g1::FT = 2.00 | (1.0, 20.0) | "sqrt(kPa)"
 
   PC_g0::Bool = false | (NaN, NaN) | "-" # PC施加到截距项
 
@@ -87,14 +87,14 @@ function stomatal_conductance(stomatal::Stomatal_BallBerry1987, Ag::T, Rd::T, D:
   es = cal_es(Ta)
   ea = es - D
   RH = ea / es
-  
+
   An::T = Ag - Rd # [umol m-2 s-1] 
   # Ca: umol mol-1
   # Gan Rong, 2018, A1; He 2017, JGR-b, Eq. 1
-  gs::T = _g0 + _g1 * (An * RH / Ca) # [mol m-2 s-1]
+  gs::T = _g0 + 1.6_g1 * (An * RH / Ca) # [mol m-2 s-1]
   return gs  # [mol m-2 s-1]
 end
 
-
+# 注意返回的是对水汽的导度
 export Stomatal_Yu2004, Stomatal_Medlyn2011, Stomatal_BallBerry1987
 export stomatal_conductance
