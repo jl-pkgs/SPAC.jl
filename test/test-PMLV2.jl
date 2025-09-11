@@ -6,10 +6,10 @@ begin
   evap = Evapotranspiration_PML{FT}()
   photo = Photosynthesis_Rong2018{FT}()
   stomatal = Stomatal_Yu2004{FT}()
-
-  df_out, df, _par = deserialize(file_FLUXNET_CRO_USTwt)
   model = LandModel{FT}(evap, photo, stomatal)
   println(model)
+  
+  df_out, df, _par = deserialize(file_FLUXNET_CRO_USTwt)
   model_gof(model, df)
 
   params = Params(model)

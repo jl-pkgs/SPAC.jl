@@ -29,6 +29,18 @@ end
 end
 
 
+# Ball-Berry 气孔导度模型
+@bounds @units @with_kw mutable struct Stomatal_BallBerry1987{FT} <: AbstractStomatalModel{FT}
+  "气孔导度截距项 [mol m⁻² s⁻¹]"
+  g0::FT = 0.0001 | (0.0, 0.04) | "mol m⁻² s⁻¹"
+
+  "气孔导度斜率参数 [unitless]"
+  g1::FT = 9.0 | (0.0, 20.0) | "-"
+
+  PC_g0::Bool = false | (NaN, NaN) | "-"
+  PC_g1::Bool = false | (NaN, NaN) | "-"
+end
+
 
 """
     stomatal_conductance(stomatal::Stomatal_Medlyn2011, Ag::T, Rd::T, D::T, Ca::T)
@@ -48,7 +60,7 @@ Gs在0.1 ~ 0.4 [mol m-2 s-1]是合理的值域，对应的阻力在 100~400 [s m
 stomatal_conductance(stomatal, Ag, Rd, VPD, Ca)
 ```
 """
-function stomatal_conductance(stomatal::Stomatal_Medlyn2011, Ag::T, Rd::T, D::T, Ca::T, PC::T) where {T<:Real}
+function stomatal_conductance(stomatal::Stomatal_Medlyn2011, Ag::T, Rd::T, D::T, Ca::T, PC::T, ignored...) where {T<:Real}
   (; g0, g1, PC_g0, PC_g1) = stomatal
   _g0::T = PC_g0 ? g0 * PC : g0
   _g1::T = PC_g1 ? g1 * PC : g1
@@ -59,7 +71,7 @@ function stomatal_conductance(stomatal::Stomatal_Medlyn2011, Ag::T, Rd::T, D::T,
 end
 
 
-function stomatal_conductance(stomatal::Stomatal_Yu2004, Ag::T, Rd::T, D::T, Ca::T, PC::T) where {T<:Real}
+function stomatal_conductance(stomatal::Stomatal_Yu2004, Ag::T, Rd::T, D::T, Ca::T, PC::T, ignored...) where {T<:Real}
   (; g1, D0, PC_g1) = stomatal
   _g1::T = PC_g1 ? g1 * PC : g1
 
@@ -67,6 +79,22 @@ function stomatal_conductance(stomatal::Stomatal_Yu2004, Ag::T, Rd::T, D::T, Ca:
   return gs # [mol m-2 s-1]
 end
 
+function stomatal_conductance(stomatal::Stomatal_BallBerry1987, Ag::T, Rd::T, D::T, Ca::T, PC::T, Ta::T=T(25.0)) where {T<:Real}
+  (; g0, g1, PC_g0, PC_g1) = stomatal
+  _g0::T = PC_g0 ? g0 * PC : g0
+  _g1::T = PC_g1 ? g1 * PC : g1
 
-export Stomatal_Yu2004, Stomatal_Medlyn2011
+  es = cal_es(Ta)
+  ea = es - D
+  RH = ea / es
+  
+  An::T = Ag - Rd # [umol m-2 s-1] 
+  # Ca: umol mol-1
+  # Gan Rong, 2018, A1; He 2017, JGR-b, Eq. 1
+  gs::T = _g0 + _g1 * (An * RH / Ca) # [mol m-2 s-1]
+  return gs  # [mol m-2 s-1]
+end
+
+
+export Stomatal_Yu2004, Stomatal_Medlyn2011, Stomatal_BallBerry1987
 export stomatal_conductance

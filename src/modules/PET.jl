@@ -180,3 +180,4 @@ end
 export aerodynamic_resistance
 export cal_rho_a
 export ET0_eq, ET0_Penman48, ET0_Monteith65, ET0_PT72, ET0_FAO98
+export cal_es

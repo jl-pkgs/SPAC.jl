@@ -1,4 +1,7 @@
-@testset "stomatal_conductance" begin
+using SPAC
+
+# @testset "stomatal_conductance" 
+begin
   FT = Float64
   Ag = 10. # [umol m-2 s-1]
   Rd = 0.15Ag
@@ -11,12 +14,15 @@
 
   stomatal_Yu2004 = Stomatal_Yu2004{FT}(D0=0.7, g1=10)
   stomatal_Medlyn2011 = Stomatal_Medlyn2011{FT}(; g0=0.0001, g1=2.0)
+  stomatal_Berry1987 = Stomatal_BallBerry1987{FT}(; g0=0.0001, g1=2.0)
 
   # Gs在0.1 ~ 0.4 [mol m-2 s-1]是合理的值域，对应的阻力在 100~400 [s m-1]
   gs_yu2004 = stomatal_conductance(stomatal_Yu2004, Ag, Rd, VPD, Ca, PC)
-  gs_medlyn2011 = stomatal_conductance(stomatal_Medlyn2011, Ag, Rd, VPD, Ca, PC)
+  gs_medlyn2011 = stomatal_conductance(stomatal_Medlyn2011, Ag, Rd, VPD, Ca, PC, Tavg)
+  gs_Berry1987 = stomatal_conductance(stomatal_Berry1987, Ag, Rd, VPD, Ca, PC, Tavg)
 
   @test gs_yu2004 ≈ 0.10916179337231968
+  @test gs_medlyn2011 ≈ 0.08650343275861604
   @test gs_medlyn2011 ≈ 0.08650343275861604
 
   # 1 [mol m⁻² s⁻¹] ≈ 0.0245 [m s-1]

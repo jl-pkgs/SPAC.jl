@@ -11,7 +11,7 @@ function leaf_conductance(
   Ag, Rd = photosynthesis(photo, Tavg, Rs, VPD, Lai, Ca, PC)
   GPP = umol2gC(Ag)
 
-  gs = stomatal_conductance(stomatal, Ag, Rd, VPD, Ca, PC) # [mol m-2 s-1], 0.1~0.4
+  gs = stomatal_conductance(stomatal, Ag, Rd, VPD, Ca, PC, Tavg) # [mol m-2 s-1], 0.1~0.4
   rs = 1 / mol2m(gs, Tavg, Pa) #[s m-1]
   GPP, rs
 end
