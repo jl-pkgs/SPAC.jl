@@ -135,7 +135,11 @@ function radiative_transfer_2layer!(canopy::OverUnderCanopy{T}, Rn::T; kA::T=T(0
   
   # Energy absorbed by understory
   canopy.Rn_under = Rn_penetrated * (1 - τ_under)
-  
+
   # Energy that penetrates both layers and reaches the soil
   canopy.Rn_soil = Rn_penetrated * τ_under
 end
+
+
+# Include VCmax vertical distribution functions
+include("../Canopy/VCmax.jl")

@@ -2,7 +2,8 @@ module SPAC
 
 export PMLV2, PMLV2_sites,
   photosynthesis, cal_Ei_Dijk2021,
-  T_adjust_Vm25, f_VPD_Zhang2019
+  T_adjust_Vm25, f_VPD_Zhang2019,
+  VCmax, VCmax_profile, VCmax_profile_mean
 
 export file_FLUXNET_CRO, file_FLUXNET_CRO_USTwt
 export DataFrame, GOF, sceua
