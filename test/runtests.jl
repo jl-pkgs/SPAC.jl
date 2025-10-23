@@ -10,6 +10,7 @@ include("test-PET.jl")
 
 include("test-radiation.jl")
 include("test-evapotranspiration.jl")
+include("test-VCmax.jl")
 
 
 @testset "Model Params update!" begin
