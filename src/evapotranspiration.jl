@@ -26,8 +26,8 @@ function evapotranspiration(
 end
 
 function evapotranspiration(model::LandModel{T}, d::AbstractDataFrame; kw...) where {T}
-  (; evap, photo, stomatal) = model
-  evapotranspiration(evap, photo, stomatal, d; kw...)
+  (; evap, photo, stomatal, canopy) = model
+  evapotranspiration(evap, photo, stomatal, d; canopy, kw...)
 end
 
 

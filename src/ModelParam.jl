@@ -42,9 +42,11 @@ function Params(model::AbstractModel)
   _units = get_ModelParamRecur(model; fun=units)
 
   # 返回NamedTuple向量，符合Tables接口
+  # 只返回有 bounds 的参数（bound 不是空元组）
   [(name=last(n), value=last(v), bound=last(b),
     unit=last(u), path=first(n))
-   for (n, v, u, b) in zip(_names, _values, _units, _bounds)] |> DataFrame
+   for (n, v, u, b) in zip(_names, _values, _units, _bounds)
+   if !isempty(last(b))] |> DataFrame
 end
 
 

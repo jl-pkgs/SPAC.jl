@@ -64,16 +64,23 @@ function update!(air::AirLayer{T}, Prcp::T, Tavg::T, Rs::T, Rn::T, VPD::T, U2::T
 end
 
 
+# Helper function to create default canopy
+_default_canopy(::Type{T}) where {T} = BigLeaf{T}()
+
 @with_kw_noshow mutable struct LandModel{T} <: AbstractModel{T}
   # atmospheric_forcing::AtmosphericForcing
   evap::AbstractEvapotranspirationModel{T}
   photo::AbstractPhotosynthesisModel{T}
   stomatal::AbstractStomatalModel{T}
+  canopy::AbstractLeaf{T} = _default_canopy(T)
 end
+
+# Constructor with positional arguments for backward compatibility
+LandModel{T}(evap, photo, stomatal) where {T} = LandModel{T}(evap, photo, stomatal, BigLeaf{T}())
 
 
 function Base.show(io::IO, x::LandModel{T}) where {T<:Real}
-  (; evap, photo, stomatal) = x
+  (; evap, photo, stomatal, canopy) = x
   
   printstyled(io, "LandModel{$T}: \n", color=:green, bold=true)
 
@@ -85,5 +92,8 @@ function Base.show(io::IO, x::LandModel{T}) where {T<:Real}
 
   printstyled(io, "stomatal{$T}: ", color=:blue, bold=true)
   print(io, stomatal)
+
+  printstyled(io, "canopy{$T}: ", color=:blue, bold=true)
+  print(io, canopy)
   return nothing
 end

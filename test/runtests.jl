@@ -23,6 +23,9 @@ include("test-multilayer.jl")
 include("test-integration.jl")
 include("test-twoleaf-integration.jl")
 
+# LandModel-Canopy integration test (new parameters like Ω)
+include("test-landmodel-canopy-integration.jl")
+
 # Dev tests (comprehensive tests)
 include("dev/test-canopy-simple.jl")
 include("dev/test-canopy-optimization-with-omega.jl")

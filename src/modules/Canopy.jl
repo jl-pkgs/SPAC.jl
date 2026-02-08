@@ -2,7 +2,7 @@ export AbstractLeaf
 export BigLeaf, TwoLeaf, TwoBigLeaf, Leaves
 
 
-abstract type AbstractLeaf{FT<:AbstractFloat} end
+abstract type AbstractLeaf{FT<:AbstractFloat} <: AbstractModel{FT} end
 
 """
     struct BigLeaf{FT<:AbstractFloat} <: AbstractLeaf{FT}  
@@ -10,18 +10,29 @@ abstract type AbstractLeaf{FT<:AbstractFloat} end
 G_s = gs_sunlit * LAI_sunlit + gs_shaded * L_shaded
 T = T(G_s)
 """
-@units @with_kw mutable struct BigLeaf{FT} <: AbstractLeaf{FT}
-  Lai::FT = 2.0 | "m² m⁻²"    # leaf area index
-  gs::FT = 0.0  | "m s-1"    # stomatal conductance for h2o
+@bounds @units @with_kw mutable struct BigLeaf{FT} <: AbstractLeaf{FT}
+  "Leaf area index [m² m⁻²]"
+  Lai::FT = 2.0 | () | "m² m⁻²"
+
+  "Stomatal conductance for H2O [m s⁻¹]"
+  gs::FT = 0.0 | () | "m s⁻¹"
+
   # Rs_c::FT = 0.0
   # Rs_s::FT = 0.0
-  Rn_c::FT = 0.0 | "W m-2"
-  Rn_s::FT = 0.0 | "W m-2"
+  "Canopy net radiation [W m⁻²]"
+  Rn_c::FT = 0.0 | () | "W m⁻²"
+
+  "Soil net radiation [W m⁻²]"
+  Rn_s::FT = 0.0 | () | "W m⁻²"
+
   # H_s::FT = 0.0   # _s: soil
   # LE_s::FT = 0.0
   # H_c::FT = 0.0   # _c: canopy
-  T::FT = 0.0 | "mm d-1"  # Transpiration
-  GPP::FT = 0.0 | "gC m-2 d-1"
+  "Transpiration [mm d⁻¹]"
+  T::FT = 0.0 | () | "mm d⁻¹"
+
+  "Gross Primary Productivity [gC m⁻² d⁻¹]"
+  GPP::FT = 0.0 | () | "gC m⁻² d⁻¹"
 end
 
 function radiative_transfer!(leaf::BigLeaf{T}, Rn::T; kA::T=T(0.7)) where {T}
@@ -36,38 +47,84 @@ end
 """
 T = T(gs_sunlit) * LAI_sunlit + T(gs_shaded) * Lai_shaded
 """
-@units @with_kw mutable struct TwoLeaf{FT} <: AbstractLeaf{FT}
-  Lai::FT = 2.0 | "m² m⁻²"
-  Ω::FT = 1.0 | "-" #  clamping index
-  Lai_sunlit::FT = 0.0 | "-"
-  Lai_shaded::FT = 0.0 | "-"
-  T_sunlit::FT = 0.0 | "mm d-1"
-  T_shaded::FT = 0.0 | "mm d-1"
-  gs_sunlit::FT = 0.0 | "m s-1" # stomatal conductance for h2o
-  gs_shaded::FT = 0.0 | "m s-1" # stomatal conductance for h2o
-  GPP_sunlit::FT = 0.0 | "gC m-2 d-1"
-  GPP_shaded::FT = 0.0 | "gC m-2 d-1"
-  Rn_c::FT = 0.0 | "W m-2"  # 冠层净辐射
-  Rn_s::FT = 0.0 | "W m-2"  # 土壤净辐射
+@bounds @units @with_kw mutable struct TwoLeaf{FT} <: AbstractLeaf{FT}
+  "Leaf area index [m² m⁻²]"
+  Lai::FT = 2.0 | () | "m² m⁻²"
+
+  "Clumping index [unitless]"
+  Ω::FT = 1.0 | (0.1, 1.0) | "-"
+
+  "Sunlit leaf area index [unitless]"
+  Lai_sunlit::FT = 0.0 | () | "-"
+
+  "Shaded leaf area index [unitless]"
+  Lai_shaded::FT = 0.0 | () | "-"
+
+  "Sunlit transpiration [mm d⁻¹]"
+  T_sunlit::FT = 0.0 | () | "mm d⁻¹"
+
+  "Shaded transpiration [mm d⁻¹]"
+  T_shaded::FT = 0.0 | () | "mm d⁻¹"
+
+  "Sunlit stomatal conductance [m s⁻¹]"
+  gs_sunlit::FT = 0.0 | () | "m s⁻¹"
+
+  "Shaded stomatal conductance [m s⁻¹]"
+  gs_shaded::FT = 0.0 | () | "m s⁻¹"
+
+  "Sunlit GPP [gC m⁻² d⁻¹]"
+  GPP_sunlit::FT = 0.0 | () | "gC m⁻² d⁻¹"
+
+  "Shaded GPP [gC m⁻² d⁻¹]"
+  GPP_shaded::FT = 0.0 | () | "gC m⁻² d⁻¹"
+
+  "Canopy net radiation [W m⁻²]"
+  Rn_c::FT = 0.0 | () | "W m⁻²"
+
+  "Soil net radiation [W m⁻²]"
+  Rn_s::FT = 0.0 | () | "W m⁻²"
 end
 
 # 导度积分到冠层，戴永久CLM
 """
 T = T(Gs_sunlit) + T(Gs_shaded)
 """
-@units @with_kw mutable struct TwoBigLeaf{FT} <: AbstractLeaf{FT}
-  Lai::FT = 2.0 | "m² m⁻²"    # 总叶面积指数
-  Ω::FT = 1.0 | "-"           # 聚集指数
-  Lai_sunlit::FT = 0.0 | "-"
-  Lai_shaded::FT = 0.0 | "-"
-  gs_sunlit::FT = 0.0 | "m s-1" # stomatal conductance for h2o
-  gs_shaded::FT = 0.0 | "m s-1" # stomatal conductance for h2o
-  T_sunlit::FT = 0.0 | "mm d-1"
-  T_shaded::FT = 0.0 | "mm d-1"
-  GPP_sunlit::FT = 0.0 | "gC m-2 d-1"
-  GPP_shaded::FT = 0.0 | "gC m-2 d-1"
-  Rn_c::FT = 0.0 | "W m-2"  # 冠层净辐射
-  Rn_s::FT = 0.0 | "W m-2"  # 土壤净辐射
+@bounds @units @with_kw mutable struct TwoBigLeaf{FT} <: AbstractLeaf{FT}
+  "Total leaf area index [m² m⁻²]"
+  Lai::FT = 2.0 | () | "m² m⁻²"
+
+  "Clumping index [unitless]"
+  Ω::FT = 1.0 | (0.1, 1.0) | "-"
+
+  "Sunlit leaf area index [unitless]"
+  Lai_sunlit::FT = 0.0 | () | "-"
+
+  "Shaded leaf area index [unitless]"
+  Lai_shaded::FT = 0.0 | () | "-"
+
+  "Sunlit stomatal conductance [m s⁻¹]"
+  gs_sunlit::FT = 0.0 | () | "m s⁻¹"
+
+  "Shaded stomatal conductance [m s⁻¹]"
+  gs_shaded::FT = 0.0 | () | "m s⁻¹"
+
+  "Sunlit transpiration [mm d⁻¹]"
+  T_sunlit::FT = 0.0 | () | "mm d⁻¹"
+
+  "Shaded transpiration [mm d⁻¹]"
+  T_shaded::FT = 0.0 | () | "mm d⁻¹"
+
+  "Sunlit GPP [gC m⁻² d⁻¹]"
+  GPP_sunlit::FT = 0.0 | () | "gC m⁻² d⁻¹"
+
+  "Shaded GPP [gC m⁻² d⁻¹]"
+  GPP_shaded::FT = 0.0 | () | "gC m⁻² d⁻¹"
+
+  "Canopy net radiation [W m⁻²]"
+  Rn_c::FT = 0.0 | () | "W m⁻²"
+
+  "Soil net radiation [W m⁻²]"
+  Rn_s::FT = 0.0 | () | "W m⁻²"
 end
 
 

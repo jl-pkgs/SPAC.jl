@@ -16,9 +16,9 @@ println("\n📊 数据概况: US-Twt (CRO)")
 println("   样本数: $(length(df.date)), LAI: $(round(minimum(LAI), digits=1))-$(round(maximum(LAI), digits=1))")
 
 #==============================================================================#
-#  模拟函数：支持不同冠层方案
+#  模拟函数：使用 LandModel 和 model.canopy
 #==============================================================================#
-function simulate_canopy(evap, photo, stomatal, df; canopy_type=:BigLeaf, Ω=1.0)
+function simulate_with_model(model::LandModel{FT}, df::DataFrame) where {FT}
   (; Prcp, LAI, Rn, Rs, Tavg, U2, VPD, Ca, Pa) = df
   ntime = length(Prcp)
 
@@ -28,8 +28,8 @@ function simulate_canopy(evap, photo, stomatal, df; canopy_type=:BigLeaf, Ω=1.0
   Es = zeros(FT, ntime)
   Ei = zeros(FT, ntime)
 
-  air = AirLayer{Float64}()
-  output = SpacOutput{Float64}()
+  air = AirLayer{FT}()
+  output = SpacOutput{FT}()
   frame = 3  # 8天滑动窗口
 
   # 第一遍：计算 Pi 和 Es_eq
@@ -37,17 +37,11 @@ function simulate_canopy(evap, photo, stomatal, df; canopy_type=:BigLeaf, Ω=1.0
   Es_eq_arr = zeros(FT, ntime)
 
   @inbounds for i in 1:ntime
-    # 创建对应的冠层对象
-    canopy = if canopy_type == :BigLeaf
-      BigLeaf{FT}(Lai=LAI[i])
-    elseif canopy_type == :TwoLeaf
-      TwoLeaf{FT}(Lai=LAI[i], Ω=Ω)
-    elseif canopy_type == :TwoBigLeaf
-      TwoBigLeaf{FT}(Lai=LAI[i], Ω=Ω)
-    end
+    # 更新冠层 LAI（逐时刻输入）
+    model.canopy.Lai = LAI[i]
 
     SPAC.update!(air, Prcp[i], Tavg[i], Rs[i], Rn[i], VPD[i], U2[i], Pa[i]; Ca=Ca[i])
-    evapotranspiration!(output, evap, photo, stomatal, air, canopy)
+    evapotranspiration!(output, model.evap, model.photo, model.stomatal, air, model.canopy)
 
     GPP[i] = output.GPP
     Ec[i] = output.Ec
@@ -78,11 +72,12 @@ parNames = Symbol[
 
 # Ω 参数边界（聚集指数，根据文献调整）
 # 农作物通常在 0.4-1.0 之间，针叶林 0.5-0.8，阔叶林 0.7-1.0
-Ω_lower = 0.4   # 降低下限，允许更强的聚集效应
-Ω_upper = 1.0   # 降低上限，避免过度规则分布
+# 但模型允许的范围是 0.1-1.0，优化器可能找到更优的值
+Ω_lower = 0.1   # 模型允许的下限
+Ω_upper = 1.0   # 模型允许的上限
 Ω_default = 0.9
 
-println("\n📝 优化参数: ", join([String(n) for n in parNames], ", "))
+println("\n📝 优化参数: α, VCmax25, g1, kA")
 println("   注: BigLeaf 不优化 Ω，TwoLeaf/TwoBigLeaf 额外优化 Ω ∈ [$(Ω_lower), $(Ω_upper)]")
 
 #==============================================================================#
@@ -92,15 +87,32 @@ println("\n" * "="^70)
 println("  第一部分：默认参数精度评估")
 println("="^70)
 
-# 创建模型组件
-evap = Evapotranspiration_PML{Float64}()
-photo = Photosynthesis_Rong2018{Float64}()
-stomatal = Stomatal_Yu2004{Float64}()
+# 创建 LandModel，包含不同冠层类型
+model_big = LandModel{FT}(
+  evap = Evapotranspiration_PML{FT}(),
+  photo = Photosynthesis_Rong2018{FT}(),
+  stomatal = Stomatal_Yu2004{FT}(),
+  canopy = BigLeaf{FT}()
+)
+
+model_two = LandModel{FT}(
+  evap = Evapotranspiration_PML{FT}(),
+  photo = Photosynthesis_Rong2018{FT}(),
+  stomatal = Stomatal_Yu2004{FT}(),
+  canopy = TwoLeaf{FT}(Ω=Ω_default)
+)
+
+model_twobig = LandModel{FT}(
+  evap = Evapotranspiration_PML{FT}(),
+  photo = Photosynthesis_Rong2018{FT}(),
+  stomatal = Stomatal_Yu2004{FT}(),
+  canopy = TwoBigLeaf{FT}(Ω=Ω_default)
+)
 
 println("\n⏳ 运行默认参数模拟...")
-r_big_default = simulate_canopy(evap, photo, stomatal, df; canopy_type=:BigLeaf)
-r_two_default = simulate_canopy(evap, photo, stomatal, df; canopy_type=:TwoLeaf, Ω=Ω_default)
-r_twobig_default = simulate_canopy(evap, photo, stomatal, df; canopy_type=:TwoBigLeaf, Ω=Ω_default)
+r_big_default = simulate_with_model(model_big, df)
+r_two_default = simulate_with_model(model_two, df)
+r_twobig_default = simulate_with_model(model_twobig, df)
 println("   ✓ 默认参数模拟完成")
 
 # 默认参数精度
@@ -143,132 +155,23 @@ println("\n" * "="^70)
 println("  第二部分：参数优化")
 println("="^70)
 
-# 保存原始参数
-evap_orig = deepcopy(evap)
-photo_orig = deepcopy(photo)
-stomatal_orig = deepcopy(stomatal)
-
 # BigLeaf 优化（不包含 Ω）
 println("  ⏳ 优化 BigLeaf...")
-evap_big = deepcopy(evap_orig)
-photo_big = deepcopy(photo_orig)
-stomatal_big = deepcopy(stomatal_orig)
-model_big = LandModel{FT}(evap_big, photo_big, stomatal_big)
+parNames_big = Symbol[:α, :VCmax25, :g1, :kA]
 params_big = Params(model_big)
-theta_big, gof_big = SPAC.optim(model_big, df; parNames, params=params_big, maxn=5000, fun_gof=SPAC.of_NSE)
-Ω_big = NaN  # BigLeaf 不使用 Ω
+theta_big, gof_big = SPAC.optim(model_big, df; parNames=parNames_big, params=params_big, maxn=5000, fun_gof=SPAC.of_NSE)
 
 # TwoLeaf 优化（包含 Ω）
 println("  ⏳ 优化 TwoLeaf（含 Ω 参数）...")
-evap_two = deepcopy(evap_orig)
-photo_two = deepcopy(photo_orig)
-stomatal_two = deepcopy(stomatal_orig)
-
-# 创建包含 Ω 的目标函数
-function twoleaf_objective(theta_all::Vector{FT})
-  # theta_all = [α, VCmax25, g1, kA, Ω]
-  evap_tmp = deepcopy(evap_two)
-  photo_tmp = deepcopy(photo_two)
-  stomatal_tmp = deepcopy(stomatal_two)
-
-  # 更新模型参数
-  evap_tmp.kA = theta_all[4]
-  photo_tmp.α = theta_all[1]
-  photo_tmp.VCmax25 = theta_all[2]
-  stomatal_tmp.g1 = theta_all[3]
-
-  # 运行模拟
-  Ω_val = theta_all[5]
-  result = simulate_canopy(evap_tmp, photo_tmp, stomatal_tmp, df; canopy_type=:TwoLeaf, Ω=Ω_val)
-
-  # 计算目标函数
-  of_ET = SPAC.of_NSE(df.ETobs, result.ET)
-  of_GPP = SPAC.of_NSE(df.GPPobs, result.GPP)
-
-  if isnan(of_ET) || isnan(of_GPP) || isinf(of_ET) || isinf(of_GPP)
-    return 1e10
-  end
-
-  return -(of_GPP + of_ET) / 2
-end
-
-# 获取初始参数值，并调整边界以避免 hit boundary
-params_two = Params(LandModel{FT}(evap_two, photo_two, stomatal_two))
-theta0_two = [photo_two.α, photo_two.VCmax25, stomatal_two.g1, evap_two.kA, Ω_default]
-
-# 调整参数边界（根据优化结果和文献）
-# α: 原边界 (0.01, 0.1)，优化到 0.1，扩大上界
-# VCmax25: 原边界 (5.0, 120.0)，优化到 13.1，保持
-# g1: 原边界 (2.0, 100.0)，优化到 63.3，保持
-# kA: 原边界 (0.5, 0.9)，优化到 0.9，扩大上界
-lower_two = [0.01,   # α 下界
-             5.0,    # VCmax25 下界
-             2.0,    # g1 下界
-             0.5,    # kA 下界
-             Ω_lower]
-upper_two = [0.15,   # α 上界（从 0.1 扩大到 0.15）
-             120.0,  # VCmax25 上界
-             100.0,  # g1 上界
-             0.95,   # kA 上界（从 0.9 扩大到 0.95）
-             Ω_upper]
-
-theta_two_full, feval_two, flag_two = SPAC.sceua(twoleaf_objective, theta0_two, lower_two, upper_two; maxn=5000, verbose=false)
-theta_two = theta_two_full[1:4]
-Ω_two = theta_two_full[5]
-
-# 更新模型参数
-evap_two.kA = theta_two[4]
-photo_two.α = theta_two[1]
-photo_two.VCmax25 = theta_two[2]
-stomatal_two.g1 = theta_two[3]
+parNames_two = Symbol[:α, :VCmax25, :g1, :kA, :Ω]
+params_two = Params(model_two)
+theta_two, gof_two = SPAC.optim(model_two, df; parNames=parNames_two, params=params_two, maxn=5000, fun_gof=SPAC.of_NSE)
 
 # TwoBigLeaf 优化（包含 Ω）
 println("  ⏳ 优化 TwoBigLeaf（含 Ω 参数）...")
-evap_twobig = deepcopy(evap_orig)
-photo_twobig = deepcopy(photo_orig)
-stomatal_twobig = deepcopy(stomatal_orig)
-
-# 创建包含 Ω 的目标函数
-function twobigleaf_objective(theta_all::Vector{FT})
-  # theta_all = [α, VCmax25, g1, kA, Ω]
-  evap_tmp = deepcopy(evap_twobig)
-  photo_tmp = deepcopy(photo_twobig)
-  stomatal_tmp = deepcopy(stomatal_twobig)
-
-  # 更新模型参数
-  evap_tmp.kA = theta_all[4]
-  photo_tmp.α = theta_all[1]
-  photo_tmp.VCmax25 = theta_all[2]
-  stomatal_tmp.g1 = theta_all[3]
-
-  # 运行模拟
-  Ω_val = theta_all[5]
-  result = simulate_canopy(evap_tmp, photo_tmp, stomatal_tmp, df; canopy_type=:TwoBigLeaf, Ω=Ω_val)
-
-  # 计算目标函数
-  of_ET = SPAC.of_NSE(df.ETobs, result.ET)
-  of_GPP = SPAC.of_NSE(df.GPPobs, result.GPP)
-
-  if isnan(of_ET) || isnan(of_GPP) || isinf(of_ET) || isinf(of_GPP)
-    return 1e10
-  end
-
-  return -(of_GPP + of_ET) / 2
-end
-
-theta0_twobig = [photo_twobig.α, photo_twobig.VCmax25, stomatal_twobig.g1, evap_twobig.kA, Ω_default]
-lower_twobig = lower_two  # 使用相同的调整后边界
-upper_twobig = upper_two
-
-theta_twobig_full, feval_twobig, flag_twobig = SPAC.sceua(twobigleaf_objective, theta0_twobig, lower_twobig, upper_twobig; maxn=5000, verbose=false)
-theta_twobig = theta_twobig_full[1:4]
-Ω_twobig = theta_twobig_full[5]
-
-# 更新模型参数
-evap_twobig.kA = theta_twobig[4]
-photo_twobig.α = theta_twobig[1]
-photo_twobig.VCmax25 = theta_twobig[2]
-stomatal_twobig.g1 = theta_twobig[3]
+parNames_twobig = Symbol[:α, :VCmax25, :g1, :kA, :Ω]
+params_twobig = Params(model_twobig)
+theta_twobig, gof_twobig = SPAC.optim(model_twobig, df; parNames=parNames_twobig, params=params_twobig, maxn=5000, fun_gof=SPAC.of_NSE)
 
 println("\n✓ 所有方案优化完成")
 
@@ -277,11 +180,11 @@ println("\n📊 优化后的参数值:")
 println("  " * "-"^66)
 println(@sprintf("  %-12s %-12s %-12s %-12s", "Parameter", "BigLeaf", "TwoLeaf", "TwoBigLeaf"))
 println("  " * "-"^66)
-for (i, name) in enumerate(parNames)
+for (i, name) in enumerate(parNames_big)
   println(@sprintf("  %-12s %-12.4f %-12.4f %-12.4f",
     name, theta_big[i], theta_two[i], theta_twobig[i]))
 end
-println(@sprintf("  %-12s %-12s %-12.4f %-12.4f", "Ω", "N/A", Ω_two, Ω_twobig))
+println(@sprintf("  %-12s %-12s %-12.4f %-12.4f", "Ω", "N/A", theta_two[5], theta_twobig[5]))
 
 #==============================================================================#
 #  第三部分：优化后精度评估
@@ -291,22 +194,22 @@ println("  第三部分：优化后精度评估")
 println("="^70)
 
 println("\n⏳ 运行优化参数模拟...")
-r_big_opt = simulate_canopy(evap_big, photo_big, stomatal_big, df; canopy_type=:BigLeaf)
-r_two_opt = simulate_canopy(evap_two, photo_two, stomatal_two, df; canopy_type=:TwoLeaf, Ω=Ω_two)
-r_twobig_opt = simulate_canopy(evap_twobig, photo_twobig, stomatal_twobig, df; canopy_type=:TwoBigLeaf, Ω=Ω_twobig)
+r_big_opt = simulate_with_model(model_big, df)
+r_two_opt = simulate_with_model(model_two, df)
+r_twobig_opt = simulate_with_model(model_twobig, df)
 println("   ✓ 优化参数模拟完成")
 
 # 优化后精度
 gof_gpp_opt = [
   ("BigLeaf", GOF(GPP_obs, r_big_opt.GPP)),
-  ("TwoLeaf(Ω=$(round(Ω_two, digits=3)))", GOF(GPP_obs, r_two_opt.GPP)),
-  ("TwoBigLeaf(Ω=$(round(Ω_twobig, digits=3)))", GOF(GPP_obs, r_twobig_opt.GPP))
+  ("TwoLeaf(Ω=$(round(model_two.canopy.Ω, digits=3)))", GOF(GPP_obs, r_two_opt.GPP)),
+  ("TwoBigLeaf(Ω=$(round(model_twobig.canopy.Ω, digits=3)))", GOF(GPP_obs, r_twobig_opt.GPP))
 ]
 
 gof_et_opt = [
   ("BigLeaf", GOF(ET_obs, r_big_opt.ET)),
-  ("TwoLeaf(Ω=$(round(Ω_two, digits=3)))", GOF(ET_obs, r_two_opt.ET)),
-  ("TwoBigLeaf(Ω=$(round(Ω_twobig, digits=3)))", GOF(ET_obs, r_twobig_opt.ET))
+  ("TwoLeaf(Ω=$(round(model_two.canopy.Ω, digits=3)))", GOF(ET_obs, r_two_opt.ET)),
+  ("TwoBigLeaf(Ω=$(round(model_twobig.canopy.Ω, digits=3)))", GOF(ET_obs, r_twobig_opt.ET))
 ]
 
 println("\n▸ 优化后 - GPP 精度:")
@@ -364,8 +267,8 @@ println("\n▸ Ω 参数优化结果:")
 println("  " * "-"^50)
 println(@sprintf("  %-18s %10s %10s", "Model", "默认值", "优化值"))
 println("  " * "-"^50)
-println(@sprintf("  %-18s %10.2f %10.3f", "TwoLeaf", Ω_default, Ω_two))
-println(@sprintf("  %-18s %10.2f %10.3f", "TwoBigLeaf", Ω_default, Ω_twobig))
+println(@sprintf("  %-18s %10.2f %10.3f", "TwoLeaf", Ω_default, model_two.canopy.Ω))
+println(@sprintf("  %-18s %10.2f %10.3f", "TwoBigLeaf", Ω_default, model_twobig.canopy.Ω))
 
 #==============================================================================#
 #  测试断言
@@ -390,8 +293,8 @@ println("="^70)
   @test gof_et_opt[3][2].NSE > 0.3   # TwoBigLeaf
 
   # Ω 参数在合理范围内
-  @test Ω_lower <= Ω_two <= Ω_upper
-  @test Ω_lower <= Ω_twobig <= Ω_upper
+  @test Ω_lower <= model_two.canopy.Ω <= Ω_upper
+  @test Ω_lower <= model_twobig.canopy.Ω <= Ω_upper
 
   # 物理一致性：不同方案结果差异在合理范围
   @test mean(abs.(r_big_opt.GPP .- r_two_opt.GPP)) / mean(r_big_opt.GPP) < 0.3
@@ -417,7 +320,7 @@ println(@sprintf("  🏆 ET  最佳方案: %-15s (NSE=%.3f)",
 println("\n  💡 结论:")
 println("     - 参数优化显著提升了所有冠层方案的模拟精度")
 println("     - BigLeaf: 计算简单，适合大尺度应用")
-println("     - TwoLeaf: 区分向阳叶/背阴叶，优化 Ω=$(round(Ω_two, digits=3))")
-println("     - TwoBigLeaf: CLM风格导度积分，优化 Ω=$(round(Ω_twobig, digits=3))")
+println("     - TwoLeaf: 区分向阳叶/背阴叶，优化 Ω=$(round(model_two.canopy.Ω, digits=3))")
+println("     - TwoBigLeaf: CLM风格导度积分，优化 Ω=$(round(model_twobig.canopy.Ω, digits=3))")
 println("     - Ω 参数优化反映了冠层结构的聚集效应")
 println()

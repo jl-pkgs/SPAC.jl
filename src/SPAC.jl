@@ -12,6 +12,8 @@ export PMLV2, PMLV2_sites,
   radiative_transfer_multilayer!, radiative_transfer_multilayer_absorbed!,
   movmean2
 
+export LandModel, AbstractLeaf
+export BigLeaf, TwoLeaf, TwoBigLeaf, Leaves, OverUnderCanopy
 export file_FLUXNET_CRO, file_FLUXNET_CRO_USTwt
 export DataFrame, GOF, sceua
 export fread, fwrite, melt_list, deserialize

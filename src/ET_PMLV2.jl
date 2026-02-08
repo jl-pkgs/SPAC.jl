@@ -101,13 +101,13 @@ function evapotranspiration(
   VPD::V, U2::V,
   Pa::V, Ca::V, PC::Union{T,V}=T(1.0);
   frame::Int=3,
-  res::Union{Nothing,SpacOutputs}=nothing) where {T<:Real,V<:AbstractVector{T}}
+  res::Union{Nothing,SpacOutputs}=nothing,
+  canopy::AbstractLeaf{T}=BigLeaf{T}()) where {T<:Real,V<:AbstractVector{T}}
 
   # 是否开启光周期
   (; PC_photo) = photo
   !isa(PC, Vector) && (PC_photo = false)
 
-  canopy = BigLeaf{T}() # 先测试大叶模型
   air = AirLayer{T}()
   r = SpacOutput{T}()
 

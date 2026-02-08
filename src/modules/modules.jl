@@ -1,5 +1,5 @@
-include("Interface.jl")
 include("Canopy.jl")
+include("Interface.jl")
 
 include("PET.jl")
 include("utilize.jl")
