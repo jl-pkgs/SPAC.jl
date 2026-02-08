@@ -3,7 +3,13 @@ module SPAC
 export PMLV2, PMLV2_sites,
   photosynthesis, cal_Ei_Dijk2021,
   T_adjust_Vm25, f_VPD_Zhang2019,
-  VCmax, VCmax_profile, VCmax_profile_mean
+  VCmax, VCmax_profile, VCmax_profile_mean,
+  allocate_LAI!, calculate_CosZs, leaf_conductance,
+  evapotranspiration!, evapotranspiration,
+  initialize_multilayer!, initialize_multilayer_with_vcmax!,
+  photosynthesis_multilayer!,
+  stomatal_conductance_multilayer!,
+  radiative_transfer_multilayer!, radiative_transfer_multilayer_absorbed!
 
 export file_FLUXNET_CRO, file_FLUXNET_CRO_USTwt
 export DataFrame, GOF, sceua

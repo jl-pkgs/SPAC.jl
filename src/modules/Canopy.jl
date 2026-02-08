@@ -37,7 +37,7 @@ end
 T = T(gs_sunlit) * LAI_sunlit + T(gs_shaded) * Lai_shaded
 """
 @units @with_kw mutable struct TwoLeaf{FT} <: AbstractLeaf{FT}
-  Lai::FT = 2.0 | "m² m⁻²" 
+  Lai::FT = 2.0 | "m² m⁻²"
   Ω::FT = 1.0 | "-" #  clamping index
   Lai_sunlit::FT = 0.0 | "-"
   Lai_shaded::FT = 0.0 | "-"
@@ -47,21 +47,59 @@ T = T(gs_sunlit) * LAI_sunlit + T(gs_shaded) * Lai_shaded
   gs_shaded::FT = 0.0 | "m s-1" # stomatal conductance for h2o
   GPP_sunlit::FT = 0.0 | "gC m-2 d-1"
   GPP_shaded::FT = 0.0 | "gC m-2 d-1"
+  Rn_c::FT = 0.0 | "W m-2"  # 冠层净辐射
+  Rn_s::FT = 0.0 | "W m-2"  # 土壤净辐射
 end
 
 # 导度积分到冠层，戴永久CLM
 """
 T = T(Gs_sunlit) + T(Gs_shaded)
 """
-@with_kw mutable struct TwoBigLeaf{FT} <: AbstractLeaf{FT}
-  Lai_sunlit::FT = 0.0
-  Lai_shaded::FT = 0.0
-  gs_sunlit::FT = 0.0 # stomatal conductance for h2o
-  gs_shaded::FT = 0.0 # stomatal conductance for h2o
-  T_sunlit::FT = 0.0
-  T_shaded::FT = 0.0
-  GPP_sunlit::FT = 0.0
-  GPP_shaded::FT = 0.0
+@units @with_kw mutable struct TwoBigLeaf{FT} <: AbstractLeaf{FT}
+  Lai::FT = 2.0 | "m² m⁻²"    # 总叶面积指数
+  Ω::FT = 1.0 | "-"           # 聚集指数
+  Lai_sunlit::FT = 0.0 | "-"
+  Lai_shaded::FT = 0.0 | "-"
+  gs_sunlit::FT = 0.0 | "m s-1" # stomatal conductance for h2o
+  gs_shaded::FT = 0.0 | "m s-1" # stomatal conductance for h2o
+  T_sunlit::FT = 0.0 | "mm d-1"
+  T_shaded::FT = 0.0 | "mm d-1"
+  GPP_sunlit::FT = 0.0 | "gC m-2 d-1"
+  GPP_shaded::FT = 0.0 | "gC m-2 d-1"
+  Rn_c::FT = 0.0 | "W m-2"  # 冠层净辐射
+  Rn_s::FT = 0.0 | "W m-2"  # 土壤净辐射
+end
+
+
+"""
+    radiative_transfer!(leaf::TwoLeaf{T}, Rn::T; kA::T=T(0.7)) where {T}
+
+双叶模型辐射传输（使用总LAI进行简单的Beer定律消光）
+
+与 BigLeaf 相同的算法，因为双叶模型主要用于光合作用的区分，
+辐射传输仍然使用总LAI计算。
+"""
+function radiative_transfer!(leaf::TwoLeaf{T}, Rn::T; kA::T=T(0.7)) where {T}
+  (; Lai) = leaf
+  τ = Lai <= 0.01 ? 1.0 : exp(-kA * Lai) # 穿过的比例
+  leaf.Rn_c = (1 - τ) * Rn
+  leaf.Rn_s = τ * Rn
+end
+
+
+"""
+    radiative_transfer!(leaf::TwoBigLeaf{T}, Rn::T; kA::T=T(0.7)) where {T}
+
+两大叶模型辐射传输（使用总LAI进行简单的Beer定律消光）
+
+与 BigLeaf 相同的算法，因为双叶模型主要用于光合作用的区分，
+辐射传输仍然使用总LAI计算。
+"""
+function radiative_transfer!(leaf::TwoBigLeaf{T}, Rn::T; kA::T=T(0.7)) where {T}
+  (; Lai) = leaf
+  τ = Lai <= 0.01 ? 1.0 : exp(-kA * Lai) # 穿过的比例
+  leaf.Rn_c = (1 - τ) * Rn
+  leaf.Rn_s = τ * Rn
 end
 
 
@@ -84,8 +122,8 @@ end
   LE_sunlit::Vector{FT} = zeros(FT, nlyr)
   LE_shaded::Vector{FT} = zeros(FT, nlyr)
 
-  GPP_sunlit::FT = zeros(FT, nlyr)
-  GPP_shaded::FT = zeros(FT, nlyr)
+  GPP_sunlit::Vector{FT} = zeros(FT, nlyr)
+  GPP_shaded::Vector{FT} = zeros(FT, nlyr)
 end
 
 
@@ -143,3 +181,8 @@ end
 
 # Include VCmax vertical distribution functions
 include("../Canopy/VCmax.jl")
+# Include TwoLeaf LAI allocation functions
+include("../Canopy/twoleaf_allocation.jl")
+# Include TwoBigLeaf LAI allocation functions
+include("../Canopy/twobigleaf_allocation.jl")
+# Note: Multilayer functions are included in modules/multilayer.jl after photosynthesis.jl

@@ -85,17 +85,18 @@ function VCmax_profile(
   LAI_sunlit = zeros(FT, nlyr)
   LAI_shaded = zeros(FT, nlyr)
 
-  # 白天才进行光合
+  # 每层的LAI
+  dLAI = lai / nlyr
+
+  # 夜间处理：没有光合作用，所有LAI都是背阴叶
   if CosZs <= 0
+    fill!(LAI_shaded, dLAI)
     return VCmax_sunlit, VCmax_shaded, LAI_sunlit, LAI_shaded
   end
 
   # 消光系数
   K = 0.5 * Ω / CosZs  # 光的消光系数（假设球形叶倾角分布）
   Kn = 0.3              # 氮素的消光系数 (0.713/2.4)
-
-  # 每层的LAI
-  dLAI = lai / nlyr
 
   # 对每一层进行计算（从冠层顶部到底部）
   for i in 1:nlyr
@@ -107,22 +108,15 @@ function VCmax_profile(
     L_mid = (L_top + L_bottom) / 2
 
     # 计算当前层的向阳和背阴叶面积
-    # 基于Beer定律：向阳叶面积 = K * Ω * (1 - exp(-K * L)) * dLAI / (1 - exp(-K * dLAI))
-    # 简化公式：直接计算层顶和层底的差值
+    # 基于 Beer 定律微分：每层向阳叶面积 = dLAI * K * exp(-K * L_mid)
+    # 这表示在深度 L_mid 处，叶片被光照射的比例
 
-    # 累积向阳叶面积（从顶部到当前层底部）
-    sunlit_frac_bottom = exp(-K * L_bottom)
-    sunlit_frac_top = exp(-K * L_top)
-
-    # 当前层的向阳叶面积
-    LAI_sunlit[i] = (sunlit_frac_top - sunlit_frac_bottom) / K * K
-
-    # 实际计算：使用更精确的公式
-    # 向阳叶面积 = K * ∫exp(-K*L)dL from L_top to L_bottom
     if K > 1e-6
-      LAI_sunlit[i] = (exp(-K * L_top) - exp(-K * L_bottom))
+      # 微分形式：每层中点处的向阳叶比例
+      LAI_sunlit[i] = dLAI * K * exp(-K * L_mid)
     else
-      LAI_sunlit[i] = dLAI  # 当K很小时，所有叶片都是向阳的
+      # 当 K 很小时，所有叶片都是向阳的
+      LAI_sunlit[i] = dLAI
     end
 
     # 背阴叶面积 = 总叶面积 - 向阳叶面积

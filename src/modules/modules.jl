@@ -9,6 +9,9 @@ include("photosynthesis.jl")
 include("stomatal_conductance.jl")
 include("leaf_conductance.jl")
 
+# Include multilayer functions after photosynthesis is defined
+include("multilayer.jl")
+
 include("evaporation_interception.jl")
 # include("evapotranspiration.jl")
 

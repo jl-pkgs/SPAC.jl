@@ -38,10 +38,9 @@ function evapotranspiration!(
   photo::AbstractPhotosynthesisModel{T},
   stomatal::AbstractStomatalModel{T},
   air::AirLayer{T},
-  canopy::BigLeaf{T}) where {T<:Real}
+  canopy::AbstractLeaf{T}) where {T<:Real}
 
-  (; Prcp, Tavg, Rn, VPD, U2, Pa) = air
-  (; Lai) = canopy
+  (; Prcp, Tavg, Rn, VPD, U2, Pa, Rs) = air
   (; fER0, S_sls, kA, hc) = evap
 
   ## 水面蒸发
@@ -54,18 +53,73 @@ function evapotranspiration!(
   ET_water = Eeq_water + Evp_water
 
   ## Intercepted Evaporation (Ei)
-  Ei = cal_Ei_Dijk2021(Prcp, Lai, fER0, S_sls)
+  # Get LAI from different canopy types
+  Lai_total = if isa(canopy, BigLeaf)
+    canopy.Lai
+  elseif isa(canopy, TwoLeaf)
+    canopy.Lai
+  elseif isa(canopy, TwoBigLeaf)
+    canopy.Lai_sunlit + canopy.Lai_shaded
+  elseif isa(canopy, Leaves)
+    sum(canopy.Lai_sunlit) + sum(canopy.Lai_shaded)
+  elseif isa(canopy, OverUnderCanopy)
+    canopy.LAI_over + canopy.LAI_under
+  else
+    T(0.0)
+  end
+
+  Ei = cal_Ei_Dijk2021(Prcp, Lai_total, fER0, S_sls)
   Pi = Prcp - Ei # 应扣除这一部分消耗的能量
   # Rn = Rn - MJ2W(λ * Pi)
 
-  radiative_transfer!(canopy, Rn; kA)
-  (; Rn_c, Rn_s) = canopy
+  # 根据冠层类型进行不同的处理
+  if isa(canopy, BigLeaf)
+    # 大叶模型：直接进行辐射传输
+    radiative_transfer!(canopy, Rn; kA)
+    (; Rn_c, Rn_s) = canopy
+    GPP, rs = leaf_conductance(air, canopy, photo, stomatal)
+    Ec, Ecr, Eca, ra = ET0_Monteith65(Rn_c, Tavg, VPD, U2, Pa; rs, hc, z_wind=2.0)
 
-  GPP, rs = leaf_conductance(air, canopy, photo, stomatal) # coupling GPP model
-  Ec, Ecr, Eca, ra = ET0_Monteith65(Rn_c, Tavg, VPD, U2, Pa;
-    rs, hc, z_wind=2.0) # fix this part
+  elseif isa(canopy, TwoLeaf) || isa(canopy, TwoBigLeaf)
+    # 双叶模型：先分配 LAI，再进行辐射传输
+    CosZs = calculate_CosZs(Rs, Tavg, Pa)
+    allocate_LAI!(canopy, CosZs)
+    radiative_transfer!(canopy, Rn; kA)
+    (; Rn_c, Rn_s) = canopy
+    GPP, rs = leaf_conductance(air, canopy, photo, stomatal)
+    Ec, Ecr, Eca, ra = ET0_Monteith65(Rn_c, Tavg, VPD, U2, Pa; rs, hc, z_wind=2.0)
+
+  elseif isa(canopy, Leaves)
+    # 多层模型：初始化多层结构
+    # Note: Leaves 类型需要专门的辐射传输处理
+    # 这里暂时使用简化方法
+    radiative_transfer!(canopy, Rn; kA)
+    GPP, rs = leaf_conductance(air, canopy, photo, stomatal)
+    # 对于多层模型，Rn_c 需要从冠层顶层获取
+    Rn_c = canopy.Rn[1]  # 第一层的净辐射
+    Rn_s = canopy.Rn[end]  # 土壤层的净辐射
+    Ec, Ecr, Eca, ra = ET0_Monteith65(Rn_c, Tavg, VPD, U2, Pa; rs, hc, z_wind=2.0)
+
+  elseif isa(canopy, OverUnderCanopy)
+    # 双层模型：使用专门的辐射传输函数
+    radiative_transfer_2layer!(canopy, Rn; kA)
+    GPP, rs = leaf_conductance(air, canopy, photo, stomatal)
+    # 对于双层模型，使用上层林冠的净辐射
+    Ec, Ecr, Eca, ra = ET0_Monteith65(canopy.Rn_over, Tavg, VPD, U2, Pa; rs, hc, z_wind=2.0)
+  end
 
   ## 需要根据前期 Pi/Es_eq 去计算土壤水限制β，因此无法立即给出Es
+  # 根据冠层类型获取土壤净辐射
+  Rn_s = if isa(canopy, BigLeaf) || isa(canopy, TwoLeaf) || isa(canopy, TwoBigLeaf)
+    canopy.Rn_s
+  elseif isa(canopy, Leaves)
+    canopy.Rn[end]
+  elseif isa(canopy, OverUnderCanopy)
+    canopy.Rn_soil
+  else
+    T(0.0)
+  end
+
   Es_eq = Δ / (Δ + γ) * Rn_s |> x -> W2mm(x, λ) # 土壤均衡蒸发
   @pack! output = GPP, Ec, Ecr, Eca, Ei, Pi, Es_eq, ET_water, rs, ra
   return output

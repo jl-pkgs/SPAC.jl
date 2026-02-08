@@ -66,8 +66,8 @@ function stomatal_conductance(stomatal::Stomatal_Medlyn2011, Ag::T, Rd::T, D::T,
   _g1::T = PC_g1 ? g1 * PC : g1
 
   An::T = Ag - Rd
-  gs::T = _g0 + 1.6(1 + _g1 / sqrt(D)) * (An / Ca) # second term in [mol m-2 s-1]
-  return gs # [mol m-2 s-1]
+  gs::T = _g0 + 1.6 * (1 + _g1 / sqrt(D)) * (An / Ca) # second term in [mol m-2 s-1]
+  return max(_g0, gs) # 确保至少保留最小导度 [mol m-2 s-1]
 end
 
 
@@ -75,8 +75,9 @@ function stomatal_conductance(stomatal::Stomatal_Yu2004, Ag::T, Rd::T, D::T, Ca:
   (; g1, D0, PC_g1) = stomatal
   _g1::T = PC_g1 ? g1 * PC : g1
 
-  gs::T = 1.6_g1 * Ag / (Ca * (1 + D / D0)) # Yu 2004; Rong 2018 Eq. A3
-  return gs # [mol m-2 s-1]
+  gs::T = 1.6 * _g1 * Ag / (Ca * (1 + D / D0)) # Yu 2004; Rong 2018 Eq. A3
+  # Yu2004 模型没有 g0 参数，使用非常小的最小导度
+  return max(T(1e-6), gs) # 确保至少有微小导度 [mol m-2 s-1]
 end
 
 function stomatal_conductance(stomatal::Stomatal_BallBerry1987, Ag::T, Rd::T, D::T, Ca::T, PC::T, Ta::T=T(25.0)) where {T<:Real}
@@ -88,11 +89,11 @@ function stomatal_conductance(stomatal::Stomatal_BallBerry1987, Ag::T, Rd::T, D:
   ea = es - D
   RH = ea / es
 
-  An::T = Ag - Rd # [umol m-2 s-1] 
+  An::T = Ag - Rd # [umol m-2 s-1]
   # Ca: umol mol-1
   # Gan Rong, 2018, A1; He 2017, JGR-b, Eq. 1
-  gs::T = _g0 + 1.6_g1 * (An * RH / Ca) # [mol m-2 s-1]
-  return gs  # [mol m-2 s-1]
+  gs::T = _g0 + 1.6 * _g1 * (An * RH / Ca) # [mol m-2 s-1]
+  return max(_g0, gs)  # 确保至少保留最小导度 [mol m-2 s-1]
 end
 
 # 注意返回的是对水汽的导度

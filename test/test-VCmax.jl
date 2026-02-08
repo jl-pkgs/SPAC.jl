@@ -89,8 +89,8 @@
 
     @test all(VCmax_sunlit_night .== 0)
     @test all(VCmax_shaded_night .== 0)
-    @test all(LAI_sunlit_night .== 0)
-    @test all(LAI_shaded_night .== 0)
+    @test all(LAI_sunlit_night .== 0)  # 夜间无向阳叶
+    @test sum(LAI_shaded_night) ≈ lai rtol=1e-3  # 夜间所有LAI都是背阴叶
 
     # 测试零LAI情况
     VCmax_mean_zero, _, _ = VCmax_profile_mean(nlyr, 0.0, Ω, CosZs, VCmax25, N_leaf, slope)

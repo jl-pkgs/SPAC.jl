@@ -12,6 +12,17 @@ include("test-radiation.jl")
 include("test-evapotranspiration.jl")
 include("test-VCmax.jl")
 
+# New canopy type tests
+include("test-twoleaf.jl")
+include("test-twobigleaf.jl")
+
+# Multilayer canopy tests
+include("test-multilayer.jl")
+
+# Integration tests for all canopy types
+include("test-integration.jl")
+include("test-twoleaf-integration.jl")
+
 
 @testset "Model Params update!" begin
   FT = Float64

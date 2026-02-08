@@ -208,3 +208,60 @@ function unpack_U_shortwave!(u::Vector{T}, I_up::Vector{T}, I_dn::Vector{T};
     I_dn[iv] = u[i2]
   end
 end
+
+
+"""
+    calculate_CosZs(Rs::T, Tavg::T, Pa::T=101.325) where {T<:Real}
+
+计算太阳天顶角余弦值（CosZs）
+
+基于实测太阳辐射（Rs）与晴空辐射（Rso）的比值来估算太阳天顶角余弦。
+使用简化的经验关系，参考 FAO-56 方法。
+
+# 参数
+- `Rs`: 实测太阳辐射 [W m⁻²] 或 [MJ m⁻² d⁻¹]
+- `Tavg`: 平均气温 [℃]
+- `Pa`: 大气压 [kPa]
+
+# 返回值
+- `CosZs`: 太阳天顶角余弦值 [-]，范围 [0, 1]，负值表示夜间
+
+# 算法
+1. 估算晴空辐射 Rso（基于大气压的简化公式）
+2. 计算辐射比 Rs/Rso
+3. 通过经验关系转换 CosZs
+
+# 注意
+- 当 Rs < 5 W m⁻² 时，返回 0.0（夜间）
+- 这是一个简化的估算方法，适用于没有经纬度和时间信息的情况
+"""
+function calculate_CosZs(Rs::T, Tavg::T, Pa::T=T(101.325)) where {T<:Real}
+  # 夜间判断：辐射阈值
+  Rs_threshold = T(5.0)  # W m-2
+  if Rs < Rs_threshold
+    return T(0.0)
+  end
+
+  # 简化的晴空辐射估算（FAO-56, Eq. 37）
+  # Rso ≈ (0.75 + 2e-5 * elevation) * Ra
+  # 这里使用简化的经验公式，假设海平面
+  # Rso_base 是晴空辐射的近似值 [W m-2]
+  # 对于中纬度地区，Rso 约为 1000-1200 W m-2（正午）
+  Rso_base = T(1000.0)  # 基准晴空辐射
+
+  # 大气压修正（海拔影响）
+  pressure_factor = Pa / T(101.325)
+  Rso = Rso_base * pressure_factor
+
+  # 辐射比
+  Rs_ratio = Rs / Rso
+  Rs_ratio = clamp(Rs_ratio, T(0.0), T(1.0))
+
+  # 转换为 CosZs（经验关系）
+  # 当 Rs_ratio = 1 时，CosZs ≈ 1（正午）
+  # 当 Rs_ratio = 0.3 时，CosZs ≈ 0.3（早晚）
+  # 使用平方根关系来模拟大气质量效应
+  CosZs = sqrt(Rs_ratio)
+
+  return CosZs
+end
