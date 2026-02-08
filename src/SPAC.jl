@@ -9,7 +9,8 @@ export PMLV2, PMLV2_sites,
   initialize_multilayer!, initialize_multilayer_with_vcmax!,
   photosynthesis_multilayer!,
   stomatal_conductance_multilayer!,
-  radiative_transfer_multilayer!, radiative_transfer_multilayer_absorbed!
+  radiative_transfer_multilayer!, radiative_transfer_multilayer_absorbed!,
+  movmean2
 
 export file_FLUXNET_CRO, file_FLUXNET_CRO_USTwt
 export DataFrame, GOF, sceua

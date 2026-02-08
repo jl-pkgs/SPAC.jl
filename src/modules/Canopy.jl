@@ -179,6 +179,8 @@ function radiative_transfer_2layer!(canopy::OverUnderCanopy{T}, Rn::T; kA::T=T(0
 end
 
 
+# Include unified canopy interface
+include("../Canopy/canopy_interface.jl")
 # Include VCmax vertical distribution functions
 include("../Canopy/VCmax.jl")
 # Include TwoLeaf LAI allocation functions

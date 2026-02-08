@@ -23,6 +23,12 @@ include("test-multilayer.jl")
 include("test-integration.jl")
 include("test-twoleaf-integration.jl")
 
+# Dev tests (comprehensive tests)
+include("dev/test-canopy-simple.jl")
+include("dev/test-canopy-optimization-with-omega.jl")
+include("dev/test-modern-params-combined.jl")
+include("dev/test-multilayer-leaves.jl")
+
 
 @testset "Model Params update!" begin
   FT = Float64
