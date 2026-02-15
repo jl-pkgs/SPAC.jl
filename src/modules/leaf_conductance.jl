@@ -48,10 +48,12 @@ function leaf_conductance(
   total_LAI = Lai_sunlit + Lai_shaded
   total_LAI <= T(0.01) && return T(0.0), T(0.0)
 
+  Rs_sunlit, Rs_shaded = partition_sunshade_radiation_beer(Lai_sunlit, Lai_shaded, Rs)
+
   # 向阳叶导度
   if Lai_sunlit > T(0.01)
     Ag_sunlit, Rd_sunlit = photosynthesis_single_layer(
-      photo, Tavg, Rs, VPD, Lai_sunlit, Ca, PC; is_sunlit=true)
+      photo, Tavg, Rs_sunlit, VPD, Lai_sunlit, Ca, PC; is_sunlit=true)
     gs_sunlit = stomatal_conductance(stomatal, Ag_sunlit, Rd_sunlit, VPD, Ca, PC, Tavg)
     GPP_sunlit = umol2gC(Ag_sunlit)
   else
@@ -62,7 +64,7 @@ function leaf_conductance(
   # 背阴叶导度
   if Lai_shaded > T(0.01)
     Ag_shaded, Rd_shaded = photosynthesis_single_layer(
-      photo, Tavg, Rs, VPD, Lai_shaded, Ca, PC; is_sunlit=false)
+      photo, Tavg, Rs_shaded, VPD, Lai_shaded, Ca, PC; is_sunlit=false)
     gs_shaded = stomatal_conductance(stomatal, Ag_shaded, Rd_shaded, VPD, Ca, PC, Tavg)
     GPP_shaded = umol2gC(Ag_shaded)
   else
@@ -125,10 +127,12 @@ function leaf_conductance(
   total_LAI = Lai_sunlit + Lai_shaded
   total_LAI <= T(0.01) && return T(0.0), T(0.0)
 
+  Rs_sunlit, Rs_shaded = partition_sunshade_radiation_beer(Lai_sunlit, Lai_shaded, Rs)
+
   # 向阳叶导度
   if Lai_sunlit > T(0.01)
     Ag_sunlit, Rd_sunlit = photosynthesis_single_layer(
-      photo, Tavg, Rs, VPD, Lai_sunlit, Ca, PC; is_sunlit=true)
+      photo, Tavg, Rs_sunlit, VPD, Lai_sunlit, Ca, PC; is_sunlit=true)
     gs_sunlit = stomatal_conductance(stomatal, Ag_sunlit, Rd_sunlit, VPD, Ca, PC, Tavg)
     GPP_sunlit = umol2gC(Ag_sunlit)
   else
@@ -139,7 +143,7 @@ function leaf_conductance(
   # 背阴叶导度
   if Lai_shaded > T(0.01)
     Ag_shaded, Rd_shaded = photosynthesis_single_layer(
-      photo, Tavg, Rs, VPD, Lai_shaded, Ca, PC; is_sunlit=false)
+      photo, Tavg, Rs_shaded, VPD, Lai_shaded, Ca, PC; is_sunlit=false)
     gs_shaded = stomatal_conductance(stomatal, Ag_shaded, Rd_shaded, VPD, Ca, PC, Tavg)
     GPP_shaded = umol2gC(Ag_shaded)
   else
