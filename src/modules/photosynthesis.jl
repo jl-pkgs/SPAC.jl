@@ -174,10 +174,12 @@ function photosynthesis(
     return T(0.0), T(0.0)
   end
 
+  Rs_sunlit, Rs_shaded = partition_sunshade_radiation_beer(Lai_sunlit, Lai_shaded, Rs)
+
   # 向阳叶光合作用
   if Lai_sunlit > T(1e-6)
     Ag_sunlit, Rd_sunlit = photosynthesis_single_layer(
-      photo, Tavg, Rs, VPD, Lai_sunlit, Ca, PC; is_sunlit=true)
+      photo, Tavg, Rs_sunlit, VPD, Lai_sunlit, Ca, PC; is_sunlit=true)
   else
     Ag_sunlit = T(0.0)
     Rd_sunlit = T(0.0)
@@ -186,7 +188,7 @@ function photosynthesis(
   # 背阴叶光合作用
   if Lai_shaded > T(1e-6)
     Ag_shaded, Rd_shaded = photosynthesis_single_layer(
-      photo, Tavg, Rs, VPD, Lai_shaded, Ca, PC; is_sunlit=false)
+      photo, Tavg, Rs_shaded, VPD, Lai_shaded, Ca, PC; is_sunlit=false)
   else
     Ag_shaded = T(0.0)
     Rd_shaded = T(0.0)

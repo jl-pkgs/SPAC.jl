@@ -1,5 +1,6 @@
 export AbstractLeaf
 export BigLeaf, TwoLeaf, TwoBigLeaf, Leaves
+export partition_sunshade_radiation_beer
 
 
 abstract type AbstractLeaf{FT<:AbstractFloat} <: AbstractModel{FT} end
@@ -157,6 +158,62 @@ function radiative_transfer!(leaf::TwoBigLeaf{T}, Rn::T; kA::T=T(0.7)) where {T}
   τ = Lai <= 0.01 ? 1.0 : exp(-kA * Lai) # 穿过的比例
   leaf.Rn_c = (1 - τ) * Rn
   leaf.Rn_s = τ * Rn
+end
+
+
+"""
+    partition_sunshade_radiation_beer(Lai_sunlit, Lai_shaded, Rs; f_dif=0.2, f_dir_to_shaded=0.15, enable_partition=false)
+
+使用简化 Beer 思想把短波辐射分给向阳叶和背阴叶（单位叶面积）。
+
+- 直射部分主要分给向阳叶，少量分给背阴叶（表示多次散射）
+- 散射部分按 sun/shade 叶面积比例分配
+- `enable_partition` 为 `false` 时保持历史行为（sunlit/shaded 使用相同辐射）
+- 地面尺度能量守恒：`Rs = Rs_sunlit*Lai_sunlit + Rs_shaded*Lai_shaded`
+"""
+function partition_sunshade_radiation_beer(
+  Lai_sunlit::T,
+  Lai_shaded::T,
+  Rs::T;
+  f_dif::T=T(0.2),
+  f_dir_to_shaded::T=T(0.15),
+  enable_partition::Bool=false) where {T<:Real}
+
+  LAI_total = Lai_sunlit + Lai_shaded
+  if LAI_total <= T(1e-6) || Rs <= T(0.0)
+    return T(0.0), T(0.0)
+  end
+
+  f_dif = clamp(f_dif, T(0.0), T(1.0))
+  f_dir_to_shaded = clamp(f_dir_to_shaded, T(0.0), T(1.0))
+
+  # 默认保持历史行为（sunlit/shaded 使用相同辐射），
+  # 仅在显式开启时使用分配增强。
+  if !enable_partition
+    return Rs, Rs
+  end
+
+  Rs_dir = Rs * (one(T) - f_dif)
+  Rs_dif = Rs * f_dif
+  frac_sun = Lai_sunlit / LAI_total
+  frac_sha = one(T) - frac_sun
+
+  dir_sun_ground = Rs_dir * (one(T) - f_dir_to_shaded)
+  dir_sha_ground = Rs_dir * f_dir_to_shaded
+
+  dif_sun_ground = Rs_dif * frac_sun
+  dif_sha_ground = Rs_dif * frac_sha
+
+  sun_ground_raw = dir_sun_ground + dif_sun_ground
+  sha_ground_raw = dir_sha_ground + dif_sha_ground
+
+  sun_ground = sun_ground_raw
+  sha_ground = sha_ground_raw
+
+  Rs_sunlit = Lai_sunlit > T(1e-6) ? sun_ground / Lai_sunlit : T(0.0)
+  Rs_shaded = Lai_shaded > T(1e-6) ? sha_ground / Lai_shaded : T(0.0)
+
+  return Rs_sunlit, Rs_shaded
 end
 
 
